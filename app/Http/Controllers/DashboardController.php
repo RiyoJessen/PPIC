@@ -1,0 +1,118 @@
+<?php
+declare(strict_types=1);
+
+namespace App\Http\Controllers;
+
+use App\Http\Controllers\Controller;
+
+use App\Database\Database;
+use App\Services\InventoryService;
+
+class DashboardController extends Controller
+{
+    public static function index(): array
+    {
+        $materials = InventoryService::getMaterialStockSummary();
+
+        $kritisCount = 0;
+        $waspadaCount = 0;
+        $amanCount = 0;
+        $kritisItems = [];
+        $depleting30Count = 0;
+        $depletingItems = [];
+
+        foreach ($materials as &$m) {
+            $rec = \App\Services\ProcurementService::calculateRecommendation((int) $m['id']);
+            $dailyUsage = (float) $rec['daily_usage'];
+            $available = (float) $m['available_stock'];
+            $leadTime = (int) $m['lead_time_days'];
+
+            $daysOfSupply = ($dailyUsage > 0) ? round($available / $dailyUsage, 1) : 999.0;
+            $depletionDate = date('d M Y', strtotime('+' . max(1, (int)round($daysOfSupply)) . ' days'));
+            $orderDaysLeft = max(0, (int)round($daysOfSupply) - $leadTime);
+            $latestOrderDate = date('d M Y', strtotime('+' . $orderDaysLeft . ' days'));
+
+            $m['daily_usage'] = $dailyUsage;
+            $m['days_of_supply'] = $daysOfSupply;
+            $m['depletion_date'] = $depletionDate;
+            $m['order_days_left'] = $orderDaysLeft;
+            $m['latest_order_date'] = $latestOrderDate;
+            $m['is_order_due_today'] = ($orderDaysLeft === 0);
+
+            if ($daysOfSupply <= 30 || $m['stock_status'] === 'Kritis') {
+                $depleting30Count++;
+                $depletingItems[] = $m;
+            }
+
+            if ($m['stock_status'] === 'Kritis') {
+                $kritisCount++;
+                $kritisItems[] = $m;
+            } elseif ($m['stock_status'] === 'Waspada') {
+                $waspadaCount++;
+            } else {
+                $amanCount++;
+            }
+        }
+        unset($m);
+
+        usort($depletingItems, fn($a, $b) => $a['days_of_supply'] <=> $b['days_of_supply']);
+        usort($kritisItems, fn($a, $b) => $a['days_of_supply'] <=> $b['days_of_supply']);
+
+        $earliestDepletionDate = !empty($depletingItems) ? $depletingItems[0]['depletion_date'] : null;
+        $earliestDays = !empty($depletingItems) ? $depletingItems[0]['days_of_supply'] : null;
+        $ordersDueToday = count(array_filter($depletingItems, fn($i) => !empty($i['is_order_due_today'])));
+
+        $openPos = Database::select("
+            SELECT po.*, s.name as supplier_name,
+                   (SELECT COUNT(*) FROM purchase_order_items WHERE po_id = po.id) as item_count
+            FROM purchase_orders po
+            JOIN suppliers s ON s.id = po.supplier_id
+            WHERE po.status IN ('issued', 'partially_received')
+            ORDER BY po.expected_arrival_date ASC
+            LIMIT 5
+        ");
+
+        $pendingPrs = Database::select("
+            SELECT pr.*, 
+                   (SELECT COUNT(*) FROM purchase_requisition_items WHERE pr_id = pr.id) as item_count
+            FROM purchase_requisitions pr
+            WHERE pr.status IN ('submitted', 'draft')
+            ORDER BY pr.id DESC
+            LIMIT 5
+        ");
+
+        $recentAudits = Database::select("
+            SELECT a.*, u.name as user_name, u.role as user_role
+            FROM audit_logs a
+            LEFT JOIN users u ON u.id = a.user_id
+            ORDER BY a.id DESC
+            LIMIT 6
+        ");
+
+        $recentAiLogs = Database::select("
+            SELECT al.*, m.name as material_name, m.unit as material_unit
+            FROM ai_forecast_logs al
+            JOIN materials m ON m.id = al.material_id
+            ORDER BY al.id DESC
+            LIMIT 3
+        ");
+
+        return [
+            'total_materials' => count($materials),
+            'kritis_count' => $kritisCount,
+            'waspada_count' => $waspadaCount,
+            'aman_count' => $amanCount,
+            'depleting_30_count' => $depleting30Count,
+            'depleting_items' => $depletingItems,
+            'earliest_depletion_date' => $earliestDepletionDate,
+            'earliest_days' => $earliestDays,
+            'orders_due_today' => $ordersDueToday,
+            'materials' => $materials,
+            'kritis_items' => $kritisItems,
+            'open_pos' => $openPos,
+            'pending_prs' => $pendingPrs,
+            'recent_audits' => $recentAudits,
+            'recent_ai_logs' => $recentAiLogs,
+        ];
+    }
+}
