@@ -41,16 +41,6 @@ $pageTitle = 'Executive Dashboard PPIC';
 
 <!-- Access Banner -->
 <?php if (\App\Services\AccessControl::isSuperAdmin()): ?>
-    <div class="alert alert-danger-subtle border border-danger-subtle d-flex align-items-center justify-content-between p-3 mb-4 rounded-3 shadow-2xs">
-        <div class="d-flex align-items-center">
-            <i class="fas fa-shield-alt fs-4 me-3 text-danger"></i>
-            <div>
-                <strong class="text-danger">SUPER ADMIN AKTIF (PPIC)</strong>:
-                <span class="text-secondary small ms-1">Anda memiliki wewenang penuh untuk <strong>melihat, menginput, mengubah, dan menghapus</strong> data di seluruh 5 divisi (PPIC, Purchasing, Gudang, QC/QA, dan R&amp;D).</span>
-            </div>
-        </div>
-        <span class="badge bg-danger text-white">Semua Akses Terbuka</span>
-    </div>
 <?php else: ?>
     <?php $roleCode = \App\Services\AccessControl::getCurrentRole(); ?>
     <div class="alert alert-info-subtle border border-info-subtle d-flex align-items-center justify-content-between p-3 mb-4 rounded-3 shadow-2xs">
@@ -108,48 +98,6 @@ $pageTitle = 'Executive Dashboard PPIC';
             </div>
         </div>
     </div>
-
-    <!-- Card 3: PR Pending -->
-    <div class="col-12 col-sm-6 col-xl-3">
-        <div class="card stat-card border-0 shadow-sm border-start border-4 border-primary h-100">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span class="text-muted small fw-semibold text-uppercase">Purchase Requisition Aktif</span>
-                    <span class="badge bg-primary-subtle text-primary rounded-pill px-2 py-1">
-                        <i class="fas fa-file-invoice-dollar"></i>
-                    </span>
-                </div>
-                <div class="d-flex align-items-baseline">
-                    <h2 class="fw-bold text-primary mb-0"><?= count($pending_prs) ?></h2>
-                    <span class="text-muted small ms-2">PR Menunggu</span>
-                </div>
-                <div class="text-muted small mt-2">
-                    <i class="fas fa-check-circle text-primary me-1"></i> Menunggu persetujuan &amp; terbit PO
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Card 4: Open PO -->
-    <div class="col-12 col-sm-6 col-xl-3">
-        <div class="card stat-card border-0 shadow-sm border-start border-4 border-success h-100">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span class="text-muted small fw-semibold text-uppercase">Purchase Order Berjalan</span>
-                    <span class="badge bg-success-subtle text-success rounded-pill px-2 py-1">
-                        <i class="fas fa-truck"></i>
-                    </span>
-                </div>
-                <div class="d-flex align-items-baseline">
-                    <h2 class="fw-bold text-success mb-0"><?= count($open_pos) ?></h2>
-                    <span class="text-muted small ms-2">PO Terbit</span>
-                </div>
-                <div class="text-muted small mt-2">
-                    <i class="fas fa-clock text-success me-1"></i> Menunggu kedatangan fisik
-                </div>
-            </div>
-        </div>
-    </div>
 </div>
 
 <!-- AI Gemini Insight Banner -->
@@ -164,7 +112,7 @@ $pageTitle = 'Executive Dashboard PPIC';
                     </span>
                     <span class="text-muted small">Update: <?= date('d M Y', strtotime($firstLog['analysis_date'])) ?></span>
                 </div>
-                <a href="/ai/forecast" class="btn btn-outline-dark btn-sm rounded-pill px-3">
+            <a href="/ai/forecast" class="btn btn-outline-dark btn-sm rounded-pill px-3">
                     Buka Forecasting Detail <i class="fas fa-arrow-right ms-1"></i>
                 </a>
             </div>

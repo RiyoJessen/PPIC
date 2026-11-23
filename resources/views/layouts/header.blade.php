@@ -17,6 +17,7 @@
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
+
 <body>
 <div class="d-flex" id="wrapper">
     <!-- Sidebar -->
@@ -30,11 +31,7 @@
                 <button class="btn btn-outline-secondary btn-sm me-3" id="menu-toggle" title="Tampilkan / Sembunyikan Sidebar">
                     <i class="fas fa-bars"></i>
                 </button>
-                <div class="company-badge me-3">
-                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 font-monospace">
-                        <i class="fas fa-industry me-1"></i> PT DUNIA KIMIA JAYA GRESIK
-                    </span>
-                </div>
+                
                 <div class="text-muted small d-none d-md-block">
                     <i class="fas fa-calendar-day me-1 text-secondary"></i> <?= date('l, d F Y') ?>
                 </div>
@@ -156,37 +153,31 @@
                     <button class="btn btn-light btn-sm dropdown-toggle d-flex align-items-center gap-2 border px-3 py-1 shadow-xs" type="button" data-bs-toggle="dropdown">
                         <div class="avatar-circle">
                             <?php if (\App\Services\AccessControl::isSuperAdmin()): ?>
-                                <i class="fas fa-user-shield text-danger fs-5" title="Super Admin"></i>
+                                <i class="fas fa-user-shield fs-5" style="color: #2563eb;" title="Super Admin"></i>
                             <?php else: ?>
                                 <i class="fas fa-user-circle text-primary fs-5"></i>
                             <?php endif; ?>
                         </div>
                         <div class="text-start d-none d-sm-block">
-                            <div class="fw-semibold lh-1 small"><?= htmlspecialchars($_SESSION['user_name'] ?? 'Rian Hidayat') ?></div>
-                            <small class="<?= \App\Services\AccessControl::isSuperAdmin() ? 'text-danger fw-bold' : 'text-muted' ?> font-monospace" style="font-size: 10px;">
-                                <?= htmlspecialchars($_SESSION['user_role'] ?? 'PPIC (Super Admin)') ?>
-                            </small>
+                            <div class="fw-semibold lh-1 small"><?= htmlspecialchars($_SESSION['user_name'] ?? 'User') ?></div>
                         </div>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end shadow">
-                        <li><h6 class="dropdown-header">Ganti Divisi / Simulasi Role:</h6></li>
                         <li>
                             <a class="dropdown-item <?= \App\Services\AccessControl::isSuperAdmin() ? 'active fw-bold' : '' ?>" href="?switch_role=PPIC">
-                                <i class="fas fa-shield-alt me-2 text-danger"></i>
-                                <strong>PPIC</strong> <span class="badge bg-danger text-white ms-1">SUPER ADMIN</span>
-                                <div class="small text-muted ps-4" style="font-size: 11px;">Akses Penuh: View, Input, Delete Semua Divisi</div>
+                                <i class="fas fa-shield-alt me-2" style="color: #2563eb;"></i>
+                                <strong>PPIC</strong>
                             </a>
                         </li>
                         <li><hr class="dropdown-divider"></li>
-                        <li><h6 class="dropdown-header">Divisi Khusus (Akses Terbatas):</h6></li>
                         <li>
                             <a class="dropdown-item <?= \App\Services\AccessControl::getCurrentRole() === 'Purchasing' ? 'active fw-bold' : '' ?>" href="?switch_role=Purchasing">
-                                <i class="fas fa-shopping-cart me-2 text-success"></i> <strong>Purchasing</strong> (Evaluasi Vendor, PR &amp; PO)
+                                <i class="fas fa-shopping-cart me-2" style="color: #0d9488;"></i> <strong>Purchasing</strong> (Evaluasi Vendor, PR &amp; PO)
                             </a>
                         </li>
                         <li>
                             <a class="dropdown-item <?= \App\Services\AccessControl::getCurrentRole() === 'RD' ? 'active fw-bold' : '' ?>" href="?switch_role=RD">
-                                <i class="fas fa-flask-vial me-2 text-warning"></i> <strong>R&amp;D</strong> (Evaluasi Formula BOM &amp; Material)
+                                <i class="fas fa-flask-vial me-2" style="color: #7c3aed;"></i> <strong>R&amp;D</strong> (Evaluasi Formula BOM &amp; Material)
                             </a>
                         </li>
                         <?php if (\App\Services\AccessControl::isSuperAdmin()): ?>

@@ -15,29 +15,16 @@ $currentRole = AccessControl::getCurrentRole();
 <div class="sidebar border-end bg-dark text-white" id="sidebar-wrapper">
     <!-- Brand Logo & Role Badge -->
     <div class="sidebar-heading px-4 py-3 border-bottom border-secondary">
-        <div class="d-flex align-items-center gap-2 mb-2">
-            <div class="brand-icon bg-primary text-white rounded p-2 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
-                <i class="fas fa-brain fs-5"></i>
-            </div>
-            <div>
-                <div class="fw-bold tracking-tight text-white fs-6 lh-1">PPIC</div>
-            </div>
+        <div class="d-flex align-items-center gap-3 mb-2">
+            <img src="/images/dkj.png" alt="Logo PT Dunia Kimia Jaya" class="flex-shrink-0 rounded bg-white" style="width: 90px; height: 50px; object-fit: contain;">
+            <div class="fw-bold tracking-tight text-white fs-6 lh-1">PPIC</div>
         </div>
 
         <!-- Role Access Indicator -->
         <div class="mt-2">
             <?php if ($isSuperAdmin): ?>
-                <span class="badge bg-danger text-white w-100 py-1 font-monospace d-flex align-items-center justify-content-center gap-1 shadow-sm" style="font-size: 10px;">
-                    <i class="fas fa-shield-alt"></i> PPIC &bull; SUPER ADMIN
-                </span>
             <?php elseif ($currentRole === AccessControl::ROLE_PURCHASING): ?>
-                <span class="badge bg-success-subtle text-success border border-success-subtle w-100 py-1 font-monospace d-flex align-items-center justify-content-center gap-1" style="font-size: 10px;">
-                    <i class="fas fa-shopping-cart"></i> PURCHASING &bull; EVALUASI VENDOR
-                </span>
             <?php elseif ($currentRole === AccessControl::ROLE_RD): ?>
-                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle w-100 py-1 font-monospace d-flex align-items-center justify-content-center gap-1" style="font-size: 10px;">
-                    <i class="fas fa-flask-vial"></i> R&amp;D &bull; EVALUASI FORMULA
-                </span>
             <?php endif; ?>
         </div>
     </div>
