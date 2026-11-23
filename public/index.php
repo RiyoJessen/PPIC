@@ -119,7 +119,11 @@ try {
     if ($uri === '/forecast-sales') {
         $year = isset($_GET['year']) ? (int) $_GET['year'] : (int) date('Y');
         $pid = isset($_GET['product_id']) ? (int) $_GET['product_id'] : null;
-        $data = \App\Http\Controllers\SalesForecastController::index($year, $pid);
+        $needsStartDate = isset($_GET['start_date']) && is_string($_GET['start_date']) ? $_GET['start_date'] : null;
+        $needsProductId = isset($_GET['needs_product_id']) && is_scalar($_GET['needs_product_id'])
+            ? (int) $_GET['needs_product_id']
+            : null;
+        $data = \App\Http\Controllers\SalesForecastController::index($year, $pid, $needsStartDate, $needsProductId);
         echo view('sales.forecast', $data);
         exit;
     }
@@ -127,8 +131,9 @@ try {
     if ($uri === '/forecast-sales/store-sales' && $method === 'POST') {
         \App\Http\Controllers\SalesForecastController::storeSalesHistory($_POST, (int) $_SESSION['user_id']);
         $yr = (int) ($_POST['redirect_year'] ?? date('Y'));
+        $section = in_array($_POST['redirect_section'] ?? '', ['needs', 'history'], true) ? $_POST['redirect_section'] : 'needs';
         $_SESSION['flash_success'] = "Data penjualan / Quotation / SO berhasil dicatat!";
-        header("Location: /forecast-sales?year={$yr}");
+        header("Location: /forecast-sales?year={$yr}&section={$section}");
         exit;
     }
 
@@ -136,18 +141,20 @@ try {
         $id = (int) ($_GET['id'] ?? 0);
         $status = (string) ($_GET['status'] ?? 'confirmed_so');
         $yr = (int) ($_GET['year'] ?? date('Y'));
+        $section = in_array($_GET['section'] ?? '', ['needs', 'history'], true) ? $_GET['section'] : 'overview';
         \App\Http\Controllers\SalesForecastController::updateSalesStatus($id, $status, (int) $_SESSION['user_id']);
         $_SESSION['flash_success'] = "Status dokumen sales berhasil diperbarui!";
-        header("Location: /forecast-sales?year={$yr}");
+        header("Location: /forecast-sales?year={$yr}&section={$section}");
         exit;
     }
 
     if ($uri === '/forecast-sales/delete-sales') {
         $id = (int) ($_GET['id'] ?? 0);
         $yr = (int) ($_GET['year'] ?? date('Y'));
+        $section = in_array($_GET['section'] ?? '', ['needs', 'history'], true) ? $_GET['section'] : 'overview';
         \App\Http\Controllers\SalesForecastController::deleteSalesHistory($id, (int) $_SESSION['user_id']);
         $_SESSION['flash_success'] = "Data penjualan berhasil dihapus.";
-        header("Location: /forecast-sales?year={$yr}");
+        header("Location: /forecast-sales?year={$yr}&section={$section}");
         exit;
     }
 
@@ -159,7 +166,7 @@ try {
         } else {
             $_SESSION['flash_error'] = "File CSV penjualan tidak ditemukan atau gagal diunggah.";
         }
-        header('Location: /forecast-sales');
+        header('Location: /forecast-sales?section=history');
         exit;
     }
 
@@ -177,7 +184,7 @@ try {
         $yr = (int) ($_POST['forecast_year'] ?? date('Y'));
         $cnt = \App\Http\Controllers\SalesForecastController::generateForecast($_POST, (int) $_SESSION['user_id']);
         $_SESSION['flash_success'] = "Berhasil menghitung Forecast Sales 12 Bulan ({$yr}) otomatis untuk {$cnt} produk dari riwayat penjualan aktual!";
-        header("Location: /forecast-sales?year={$yr}");
+        header("Location: /forecast-sales?year={$yr}&section=forecast");
         exit;
     }
 
@@ -185,16 +192,17 @@ try {
         $yr = (int) ($_POST['forecast_year'] ?? date('Y'));
         \App\Http\Controllers\SalesForecastController::storeForecastManual($_POST, (int) $_SESSION['user_id']);
         $_SESSION['flash_success'] = "Forecast Sales 12 Bulan ({$yr}) berhasil disimpan!";
-        header("Location: /forecast-sales?year={$yr}");
+        header("Location: /forecast-sales?year={$yr}&section=forecast");
         exit;
     }
 
     if ($uri === '/forecast-sales/delete-forecast') {
         $id = (int) ($_GET['id'] ?? 0);
         $yr = (int) ($_GET['year'] ?? date('Y'));
+        $section = ($_GET['section'] ?? '') === 'forecast' ? 'forecast' : 'overview';
         \App\Http\Controllers\SalesForecastController::deleteForecast($id, (int) $_SESSION['user_id']);
         $_SESSION['flash_success'] = "Data Forecast Sales berhasil dihapus.";
-        header("Location: /forecast-sales?year={$yr}");
+        header("Location: /forecast-sales?year={$yr}&section={$section}");
         exit;
     }
 

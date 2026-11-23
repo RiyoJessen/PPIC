@@ -8,9 +8,24 @@ use App\Services\SalesForecastService;
 
 class SalesForecastController extends Controller
 {
-    public static function index(?int $year = null, ?int $selectedProductId = null): array
+    public static function index(
+        ?int $year = null,
+        ?int $selectedProductId = null,
+        ?string $needsStartDate = null,
+        ?int $needsProductId = null
+    ): array
     {
         $year = $year ?: (int) date('Y');
+        if ($needsStartDate !== null) {
+            $dateParts = [];
+            if (
+                !preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $needsStartDate, $dateParts)
+                || !checkdate((int) $dateParts[2], (int) $dateParts[3], (int) $dateParts[1])
+            ) {
+                $needsStartDate = null;
+            }
+        }
+        $needsProductId = $needsProductId !== null && $needsProductId > 0 ? $needsProductId : null;
         $products = Database::select("SELECT * FROM products ORDER BY id ASC");
 
         $salesHistories = Database::select("
@@ -43,9 +58,9 @@ class SalesForecastController extends Controller
         $actualRows = Database::select("
             SELECT sale_month, SUM(quantity) as qty
             FROM sales_histories
-            WHERE status IN ('fulfilled', 'confirmed_so')
+            WHERE status = 'fulfilled' AND sale_month LIKE :yr
             GROUP BY sale_month
-        ");
+        ", ['yr' => $year . '-%']);
         foreach ($actualRows as $ar) {
             $mNum = (int) substr((string) $ar['sale_month'], 5, 2);
             if ($mNum >= 1 && $mNum <= 12) {
@@ -53,14 +68,43 @@ class SalesForecastController extends Controller
             }
         }
 
-        $totalSalesQty = 0.0;
-        $openQuotationSo = 0;
-        foreach ($salesHistories as $sh) {
-            $totalSalesQty += (float) $sh['quantity'];
-            if (in_array($sh['status'], ['quotation', 'confirmed_so'], true)) {
-                $openQuotationSo++;
-            }
+        $salesSummary = Database::selectOne("
+            SELECT
+                COUNT(*) as total_sales_records,
+                COALESCE(SUM(quantity), 0) as total_sales_qty,
+                COALESCE(SUM(CASE WHEN status = 'fulfilled' AND sale_month LIKE :yr THEN quantity ELSE 0 END), 0) as total_actual_sales_qty,
+                COALESCE(SUM(CASE WHEN status IN ('quotation', 'confirmed_so') THEN 1 ELSE 0 END), 0) as open_quotation_so
+            FROM sales_histories
+        ", ['yr' => $year . '-%']) ?? [];
+
+        $needsConditions = ["sh.status IN ('quotation', 'confirmed_so')"];
+        $needsParams = [];
+        if ($needsStartDate !== null) {
+            $needsConditions[] = 'sh.sale_date >= :needs_start_date';
+            $needsParams['needs_start_date'] = $needsStartDate;
         }
+        if ($needsProductId !== null) {
+            $needsConditions[] = 'sh.product_id = :needs_product_id';
+            $needsParams['needs_product_id'] = $needsProductId;
+        }
+        $needsWhere = implode(' AND ', $needsConditions);
+        $needsHistories = Database::select("
+            SELECT sh.*, p.code as product_code, p.name as product_name, p.unit as product_unit
+            FROM sales_histories sh
+            JOIN products p ON p.id = sh.product_id
+            WHERE {$needsWhere}
+            ORDER BY sh.sale_date DESC, sh.id DESC
+            LIMIT 50
+        ", $needsParams);
+
+        $needsSummary = Database::selectOne("
+            SELECT
+                COUNT(*) as total_requests,
+                COUNT(DISTINCT product_id) as product_types,
+                COUNT(DISTINCT customer_name) as customers
+            FROM sales_histories
+            WHERE status IN ('quotation', 'confirmed_so')
+        ") ?? [];
 
         $total12mForecast = array_sum($monthlyForecastTotals);
         $shortageProductsCount = count(array_filter($mrpEvaluations, fn($e) => $e['rm_status'] === 'shortage' || !$e['has_formula']));
@@ -70,15 +114,24 @@ class SalesForecastController extends Controller
             'selected_product_id' => $selectedProductId,
             'products' => $products,
             'sales_histories' => $salesHistories,
+            'needs_histories' => $needsHistories,
+            'needs_start_date' => $needsStartDate,
+            'needs_product_id' => $needsProductId,
             'forecasts' => $forecasts,
             'mrp_evaluations' => $mrpEvaluations,
-            'monthly_forecast_totals' => array_values($monthlyForecastTotals),
-            'monthly_actual_totals' => array_values($monthlyActualTotals),
-            'total_sales_records' => count($salesHistories),
-            'total_sales_qty' => $totalSalesQty,
+            'monthly_forecast_totals' => array_values(array_slice($monthlyForecastTotals, 1)),
+            'monthly_actual_totals' => array_values(array_slice($monthlyActualTotals, 1)),
+            'total_sales_records' => (int) ($salesSummary['total_sales_records'] ?? 0),
+            'total_sales_qty' => (float) ($salesSummary['total_sales_qty'] ?? 0),
+            'total_actual_sales_qty' => (float) ($salesSummary['total_actual_sales_qty'] ?? 0),
+            'needs_summary' => [
+                'total_requests' => (int) ($needsSummary['total_requests'] ?? 0),
+                'product_types' => (int) ($needsSummary['product_types'] ?? 0),
+                'customers' => (int) ($needsSummary['customers'] ?? 0),
+            ],
             'total_12m_forecast' => $total12mForecast,
             'shortage_products_count' => $shortageProductsCount,
-            'open_quotation_so' => $openQuotationSo,
+            'open_quotation_so' => (int) ($salesSummary['open_quotation_so'] ?? 0),
         ];
     }
 

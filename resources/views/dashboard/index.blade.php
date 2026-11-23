@@ -176,11 +176,11 @@ $pageTitle = 'Executive Dashboard PPIC';
             </p>
             <div class="d-flex flex-wrap gap-3 align-items-center pt-2 border-top border-secondary-subtle">
                 <div class="small">
-                    <strong>Rekomendasi Beli (Q):</strong> 
+                    <strong>Rekomendasi Beli (Q):</strong>
                     <span class="badge bg-primary fs-6 ms-1"><?= number_format((float)$firstLog['recommended_qty'], 0, ',', '.') ?> <?= $firstLog['material_unit'] ?></span>
                 </div>
                 <div class="small">
-                    <strong>Tingkat Risiko:</strong> 
+                    <strong>Tingkat Risiko:</strong>
                     <span class="badge bg-danger ms-1"><?= $firstLog['risk_level'] ?></span>
                 </div>
                 <div class="ms-auto">
