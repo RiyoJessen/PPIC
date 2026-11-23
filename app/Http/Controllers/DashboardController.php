@@ -62,15 +62,12 @@ class DashboardController extends Controller
         $earliestDays = !empty($depletingItems) ? $depletingItems[0]['days_of_supply'] : null;
         $ordersDueToday = count(array_filter($depletingItems, fn($i) => !empty($i['is_order_due_today'])));
 
-        $openPos = Database::select("
-            SELECT po.*, s.name as supplier_name,
-                   (SELECT COUNT(*) FROM purchase_order_items WHERE po_id = po.id) as item_count
-            FROM purchase_orders po
-            JOIN suppliers s ON s.id = po.supplier_id
-            WHERE po.status IN ('issued', 'partially_received')
-            ORDER BY po.expected_arrival_date ASC
-            LIMIT 5
-        ");
+        $finishGoodCount = (int) (Database::selectOne("SELECT COUNT(*) as total FROM products")['total'] ?? 0);
+        $quotationSoCount = (int) (Database::selectOne("
+            SELECT COUNT(*) as total
+            FROM sales_histories
+            WHERE status IN ('quotation', 'confirmed_so')
+        ")['total'] ?? 0);
 
         $pendingPrs = Database::select("
             SELECT pr.*, 
@@ -107,9 +104,10 @@ class DashboardController extends Controller
             'earliest_depletion_date' => $earliestDepletionDate,
             'earliest_days' => $earliestDays,
             'orders_due_today' => $ordersDueToday,
+            'finish_good_count' => $finishGoodCount,
+            'quotation_so_count' => $quotationSoCount,
             'materials' => $materials,
             'kritis_items' => $kritisItems,
-            'open_pos' => $openPos,
             'pending_prs' => $pendingPrs,
             'recent_audits' => $recentAudits,
             'recent_ai_logs' => $recentAiLogs,

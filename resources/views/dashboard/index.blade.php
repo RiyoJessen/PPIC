@@ -59,42 +59,44 @@ $pageTitle = 'Executive Dashboard PPIC';
 <div class="row g-3 mb-4">
     <!-- Card 1: Kritis -->
     <div class="col-12 col-sm-6 col-xl-3">
-        <div class="card stat-card border-0 shadow-sm border-start border-4 border-danger h-100">
+        <div class="card h-100">
             <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span class="text-muted small fw-semibold text-uppercase">Bahan Status Kritis</span>
-                    <span class="badge bg-danger-subtle text-danger rounded-pill px-2 py-1">
-                        <i class="fas fa-exclamation-triangle"></i>
-                    </span>
-                </div>
-                <div class="d-flex align-items-baseline">
-                    <h2 class="fw-bold text-danger mb-0"><?= $kritis_count ?></h2>
-                    <span class="text-muted small ms-2">Bahan Baku</span>
-                </div>
-                <div class="text-muted small mt-2">
-                    <i class="fas fa-arrow-down text-danger me-1"></i> Stok tersedia &le; safety stock
-                </div>
+                <div class="text-muted small fw-semibold">Bahan Status Kritis</div>
+                <div class="fs-4 fw-bold text-dark mt-1"><?= (int)$kritis_count ?></div>
+                <small class="text-muted">Stok tersedia &le; safety stock</small>
             </div>
         </div>
     </div>
 
     <!-- Card 2: Waspada -->
     <div class="col-12 col-sm-6 col-xl-3">
-        <div class="card stat-card border-0 shadow-sm border-start border-4 border-warning h-100">
+        <div class="card h-100">
             <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span class="text-muted small fw-semibold text-uppercase">Bahan Status Waspada</span>
-                    <span class="badge bg-warning-subtle text-warning-emphasis rounded-pill px-2 py-1">
-                        <i class="fas fa-bell"></i>
-                    </span>
-                </div>
-                <div class="d-flex align-items-baseline">
-                    <h2 class="fw-bold text-warning-emphasis mb-0"><?= $waspada_count ?></h2>
-                    <span class="text-muted small ms-2">Bahan Baku</span>
-                </div>
-                <div class="text-muted small mt-2">
-                    <i class="fas fa-exclamation-circle text-warning me-1"></i> Mendekati Reorder Point (ROP)
-                </div>
+                <div class="text-muted small fw-semibold">Bahan Status Waspada</div>
+                <div class="fs-4 fw-bold text-dark mt-1"><?= (int)$waspada_count ?></div>
+                <small class="text-muted">Mendekati Reorder Point (ROP)</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card 3: Finish Good -->
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="text-muted small fw-semibold">Finish Good</div>
+                <div class="fs-4 fw-bold text-dark mt-1"><?= number_format((int)$finish_good_count, 0, ',', '.') ?></div>
+                <small class="text-muted">Jenis produk terdaftar</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card 4: Quotation & SO -->
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="text-muted small fw-semibold">Quotation &amp; SO</div>
+                <div class="fs-4 fw-bold text-dark mt-1"><?= number_format((int)$quotation_so_count, 0, ',', '.') ?></div>
+                <small class="text-muted">Dokumen aktif</small>
             </div>
         </div>
     </div>
@@ -144,11 +146,11 @@ $pageTitle = 'Executive Dashboard PPIC';
 <!-- Charts Row -->
 <div class="row g-3 mb-4">
     <!-- Bar Chart: Bahan Kritis vs Safety Stock -->
-    <div class="col-12 col-lg-8">
+    <div class="col-12">
         <div class="card border-0 shadow-sm h-100">
             <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                <span class="fw-bold"><i class="fas fa-chart-bar me-2 text-primary"></i> Perbandingan Stok Tersedia vs Safety Stock (Top Bahan Baku)</span>
-                <span class="badge bg-light text-muted border">Satuan Kg / L</span>
+                <span class="fw-bold"><i class="fas fa-chart-bar me-2 text-primary"></i>Stok Tersedia vs Safety Stock</span>
+                <span class="badge bg-light text-muted border">Satuan /ton</span>
             </div>
             <div class="card-body">
                 <canvas id="stockComparisonChart" height="130"></canvas>
@@ -156,30 +158,12 @@ $pageTitle = 'Executive Dashboard PPIC';
         </div>
     </div>
 
-    <!-- Doughnut Chart: Sebaran Status -->
-    <div class="col-12 col-lg-4">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-header bg-white fw-bold">
-                <i class="fas fa-chart-pie me-2 text-warning"></i> Komposisi Kesehatan Stok
-            </div>
-            <div class="card-body d-flex flex-column align-items-center justify-content-center">
-                <div style="width: 220px; height: 220px;">
-                    <canvas id="stockStatusChart"></canvas>
-                </div>
-                <div class="d-flex justify-content-center gap-3 mt-3 small text-muted">
-                    <span><i class="fas fa-circle text-danger me-1"></i> Kritis (<?= $kritis_count ?>)</span>
-                    <span><i class="fas fa-circle text-warning me-1"></i> Waspada (<?= $waspada_count ?>)</span>
-                    <span><i class="fas fa-circle text-success me-1"></i> Aman (<?= $aman_count ?>)</span>
-                </div>
-            </div>
-        </div>
-    </div>
 </div>
 
 <!-- Tables Row -->
 <div class="row g-3 mb-4">
     <!-- Critical Materials Table -->
-    <div class="col-12 col-xl-7">
+    <div class="col-12">
         <div class="card border-0 shadow-sm h-100">
             <div class="card-header bg-white d-flex justify-content-between align-items-center">
                 <span class="fw-bold"><i class="fas fa-exclamation-triangle text-danger me-2"></i> Bahan Baku Berisiko &amp; Rekomendasi Tindak Lanjut</span>
@@ -249,60 +233,6 @@ $pageTitle = 'Executive Dashboard PPIC';
         </div>
     </div>
 
-    <!-- Active Production & POs -->
-    <div class="col-12 col-xl-5">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                <span class="fw-bold"><i class="fas fa-truck-moving text-primary me-2"></i> Purchase Order (PO) Berjalan</span>
-                <a href="/purchasing/po" class="btn btn-link btn-sm text-decoration-none">Semua PO &rarr;</a>
-            </div>
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light small">
-                        <tr>
-                            <th>No. PO / Supplier</th>
-                            <th>Est. Tiba</th>
-                            <th class="text-end">Total Nilai</th>
-                            <th class="text-center">Status</th>
-                        </tr>
-                    </thead>
-                    <tbody class="small">
-                        <?php if (empty($open_pos)): ?>
-                            <tr>
-                                <td colspan="4" class="text-center text-muted py-3">Tidak ada PO yang sedang berjalan.</td>
-                            </tr>
-                        <?php else: ?>
-                            <?php foreach ($open_pos as $po): ?>
-                                <tr>
-                                    <td>
-                                        <a href="/purchasing/po/show?id=<?= $po['id'] ?>" class="fw-semibold text-primary text-decoration-none">
-                                            <?= htmlspecialchars($po['po_number']) ?>
-                                        </a>
-                                        <div class="text-muted" style="font-size: 11px;"><?= htmlspecialchars($po['supplier_name']) ?></div>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-light text-dark border font-monospace">
-                                            <?= date('d M Y', strtotime($po['expected_arrival_date'])) ?>
-                                        </span>
-                                    </td>
-                                    <td class="text-end font-monospace">
-                                        Rp <?= number_format((float)$po['total_amount'], 0, ',', '.') ?>
-                                    </td>
-                                    <td class="text-center">
-                                        <span class="badge bg-info-subtle text-info border px-2 py-1">Issued</span>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
-            </div>
-            <div class="card-footer bg-white border-top small text-muted d-flex justify-content-between align-items-center">
-                <span>AI Forecasting &amp; Pengadaan</span>
-                <a href="/ai/forecast" class="btn btn-outline-primary btn-sm py-0">Buka AI Forecasting</a>
-            </div>
-        </div>
-    </div>
 </div>
 
 <!-- Modal AI Quick Analysis -->
@@ -398,27 +328,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // 2. Doughnut Chart: Sebaran Status
-    const doughnutCtx = document.getElementById('stockStatusChart').getContext('2d');
-    new Chart(doughnutCtx, {
-        type: 'doughnut',
-        data: {
-            labels: ['Kritis', 'Waspada', 'Aman'],
-            datasets: [{
-                data: [<?= $kritis_count ?>, <?= $waspada_count ?>, <?= $aman_count ?>],
-                backgroundColor: ['#ef4444', '#f59e0b', '#10b981'],
-                hoverOffset: 4
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            cutout: '70%',
-            plugins: {
-                legend: { display: false }
-            }
-        }
-    });
 });
 </script>
 

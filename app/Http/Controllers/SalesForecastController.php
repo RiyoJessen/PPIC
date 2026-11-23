@@ -12,29 +12,50 @@ class SalesForecastController extends Controller
         ?int $year = null,
         ?int $selectedProductId = null,
         ?string $needsStartDate = null,
-        ?int $needsProductId = null
+        ?int $needsProductId = null,
+        ?string $historyStartDate = null,
+        ?int $historyProductId = null
     ): array
     {
         $year = $year ?: (int) date('Y');
-        if ($needsStartDate !== null) {
+        $validateDateFilter = static function (?string $date): ?string {
+            if ($date === null) {
+                return null;
+            }
             $dateParts = [];
             if (
-                !preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $needsStartDate, $dateParts)
+                !preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $date, $dateParts)
                 || !checkdate((int) $dateParts[2], (int) $dateParts[3], (int) $dateParts[1])
             ) {
-                $needsStartDate = null;
+                return null;
             }
-        }
+            return $date;
+        };
+        $needsStartDate = $validateDateFilter($needsStartDate);
+        $historyStartDate = $validateDateFilter($historyStartDate);
         $needsProductId = $needsProductId !== null && $needsProductId > 0 ? $needsProductId : null;
+        $historyProductId = $historyProductId !== null && $historyProductId > 0 ? $historyProductId : null;
         $products = Database::select("SELECT * FROM products ORDER BY id ASC");
 
+        $historyConditions = ["sh.status = 'fulfilled'"];
+        $historyParams = [];
+        if ($historyStartDate !== null) {
+            $historyConditions[] = 'sh.sale_date >= :history_start_date';
+            $historyParams['history_start_date'] = $historyStartDate;
+        }
+        if ($historyProductId !== null) {
+            $historyConditions[] = 'sh.product_id = :history_product_id';
+            $historyParams['history_product_id'] = $historyProductId;
+        }
+        $historyWhere = implode(' AND ', $historyConditions);
         $salesHistories = Database::select("
             SELECT sh.*, p.code as product_code, p.name as product_name, p.unit as product_unit
             FROM sales_histories sh
             JOIN products p ON p.id = sh.product_id
-            ORDER BY sh.sale_month DESC, sh.id DESC
+            WHERE {$historyWhere}
+            ORDER BY sh.sale_date DESC, sh.id DESC
             LIMIT 50
-        ");
+        ", $historyParams);
 
         $forecasts = Database::select("
             SELECT sf.*, p.code as product_code, p.name as product_name, p.unit as product_unit
@@ -77,6 +98,14 @@ class SalesForecastController extends Controller
             FROM sales_histories
         ", ['yr' => $year . '-%']) ?? [];
 
+        $historySummary = Database::selectOne("
+            SELECT
+                COUNT(*) as transaction_count,
+                COALESCE(SUM(quantity), 0) / 1000.0 as total_sales_tons
+            FROM sales_histories
+            WHERE status = 'fulfilled' AND sale_month LIKE :year_month
+        ", ['year_month' => $year . '-%']) ?? [];
+
         $needsConditions = ["sh.status IN ('quotation', 'confirmed_so')"];
         $needsParams = [];
         if ($needsStartDate !== null) {
@@ -117,6 +146,8 @@ class SalesForecastController extends Controller
             'needs_histories' => $needsHistories,
             'needs_start_date' => $needsStartDate,
             'needs_product_id' => $needsProductId,
+            'history_start_date' => $historyStartDate,
+            'history_product_id' => $historyProductId,
             'forecasts' => $forecasts,
             'mrp_evaluations' => $mrpEvaluations,
             'monthly_forecast_totals' => array_values(array_slice($monthlyForecastTotals, 1)),
@@ -124,6 +155,10 @@ class SalesForecastController extends Controller
             'total_sales_records' => (int) ($salesSummary['total_sales_records'] ?? 0),
             'total_sales_qty' => (float) ($salesSummary['total_sales_qty'] ?? 0),
             'total_actual_sales_qty' => (float) ($salesSummary['total_actual_sales_qty'] ?? 0),
+            'history_summary' => [
+                'transaction_count' => (int) ($historySummary['transaction_count'] ?? 0),
+                'total_sales_tons' => (float) ($historySummary['total_sales_tons'] ?? 0),
+            ],
             'needs_summary' => [
                 'total_requests' => (int) ($needsSummary['total_requests'] ?? 0),
                 'product_types' => (int) ($needsSummary['product_types'] ?? 0),

@@ -123,7 +123,18 @@ try {
         $needsProductId = isset($_GET['needs_product_id']) && is_scalar($_GET['needs_product_id'])
             ? (int) $_GET['needs_product_id']
             : null;
-        $data = \App\Http\Controllers\SalesForecastController::index($year, $pid, $needsStartDate, $needsProductId);
+        $historyStartDate = isset($_GET['history_start_date']) && is_string($_GET['history_start_date']) ? $_GET['history_start_date'] : null;
+        $historyProductId = isset($_GET['history_product_id']) && is_scalar($_GET['history_product_id'])
+            ? (int) $_GET['history_product_id']
+            : null;
+        $data = \App\Http\Controllers\SalesForecastController::index(
+            $year,
+            $pid,
+            $needsStartDate,
+            $needsProductId,
+            $historyStartDate,
+            $historyProductId
+        );
         echo view('sales.forecast', $data);
         exit;
     }

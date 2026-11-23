@@ -145,6 +145,26 @@ $sectionSalesHistories = $activeSection === 'needs'
 <?php if (in_array($activeSection, ['history', 'forecast'], true)): ?>
 <div class="row g-4 mb-4">
     <?php if ($activeSection === 'history'): ?>
+    <div class="col-12">
+        <div class="row g-2">
+            <div class="col-12 col-sm-6">
+                <div class="card h-100">
+                    <div class="card-body p-3">
+                        <div class="text-muted small"><i class="fas fa-weight-hanging me-1"></i> Total Penjualan Aktual (<?= (int)$year ?>)</div>
+                        <div class="fs-5 fw-bold text-dark mt-1"><?= number_format((float)$history_summary['total_sales_tons'], 2, ',', '.') ?> Ton</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-sm-6">
+                <div class="card h-100">
+                    <div class="card-body p-3">
+                        <div class="text-muted small"><i class="fas fa-receipt me-1"></i> Jumlah Transaksi (<?= (int)$year ?>)</div>
+                        <div class="fs-5 fw-bold text-dark mt-1"><?= number_format((int)$history_summary['transaction_count'], 0, ',', '.') ?> transaksi</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
     <div class="col-12 col-lg-4">
         <div class="card border-0 shadow-sm h-100 border-top border-4 border-primary">
             <div class="card-header bg-white py-3 fw-bold">
@@ -169,6 +189,19 @@ $sectionSalesHistories = $activeSection === 'needs'
                 <a href="/forecast-sales/download-template" class="btn btn-outline-secondary btn-sm w-100">
                     <i class="fas fa-download me-1"></i> Unduh Template CSV Penjualan
                 </a>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-lg-8">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <span class="fw-bold"><i class="fas fa-chart-column text-primary me-2"></i> Tren Penjualan Bulanan (<?= (int)$year ?>)</span>
+                <span class="badge bg-light text-muted border">Jan &ndash; Des <?= (int)$year ?></span>
+            </div>
+            <div class="card-body">
+                <div style="height: 235px;">
+                    <canvas id="monthlySalesHistoryChart"></canvas>
+                </div>
             </div>
         </div>
     </div>
@@ -351,7 +384,7 @@ $sectionSalesHistories = $activeSection === 'needs'
 <div class="card border-0 shadow-sm mb-4">
     <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
         <span class="fw-bold"><i class="fas <?= $activeSection === 'needs' ? 'fa-clipboard-list text-primary' : 'fa-history text-info' ?> me-2"></i>
-            <?= $activeSection === 'needs' ? 'Daftar Kebutuhan Sales Aktif (Quotation &amp; SO)' : 'Daftar Riwayat Penjualan, Quotation &amp; Sales Order (SO)' ?>
+            <?= $activeSection === 'needs' ? 'Daftar Kebutuhan Sales Aktif (Quotation &amp; SO)' : 'Detail Riwayat Penjualan' ?>
         </span>
     </div>
     <?php if ($activeSection === 'needs'): ?>
@@ -384,65 +417,118 @@ $sectionSalesHistories = $activeSection === 'needs'
                 </div>
             </form>
         </div>
+    <?php else: ?>
+        <div class="px-3 py-3 bg-light border-bottom">
+            <form method="GET" action="/forecast-sales" class="row g-2 align-items-end">
+                <input type="hidden" name="section" value="history">
+                <input type="hidden" name="year" value="<?= (int)$year ?>">
+                <div class="col-12 col-md-4">
+                    <label for="historyStartDate" class="form-label small fw-semibold mb-1">Tanggal Mulai</label>
+                    <input type="date" id="historyStartDate" name="history_start_date" class="form-control form-control-sm" value="<?= htmlspecialchars($history_start_date ?? '') ?>">
+                </div>
+                <div class="col-12 col-md-4">
+                    <label for="historyProductId" class="form-label small fw-semibold mb-1">Produk</label>
+                    <select id="historyProductId" name="history_product_id" class="form-select form-select-sm">
+                        <option value="">Semua Produk</option>
+                        <?php foreach ($products as $product): ?>
+                            <option value="<?= (int)$product['id'] ?>" <?= (int)$history_product_id === (int)$product['id'] ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($product['code'] . ' — ' . $product['name']) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="col-12 col-md-4 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <i class="fas fa-filter me-1"></i> Terapkan
+                    </button>
+                    <a href="/forecast-sales?section=history&year=<?= (int)$year ?>" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-rotate-left me-1"></i> Reset
+                    </a>
+                </div>
+            </form>
+        </div>
     <?php endif; ?>
     <div class="table-responsive">
         <table class="table table-hover align-middle mb-0 small" id="salesHistoryTable">
             <thead class="table-light">
-                <tr>
-                    <th>No. Dokumen</th>
-                    <th>Periode</th>
-                    <th>Pelanggan</th>
-                    <th>Produk Jadi</th>
-                    <th class="text-end">Kuantitas</th>
-                    <th class="text-end">Total Nilai</th>
-                    <th class="text-center">Status</th>
-                    <th class="text-center">Aksi</th>
-                </tr>
+                <?php if ($activeSection === 'needs'): ?>
+                    <tr>
+                        <th>No. Dokumen</th>
+                        <th>Periode</th>
+                        <th>Pelanggan</th>
+                        <th>Produk Jadi</th>
+                        <th class="text-end">Kuantitas</th>
+                        <th class="text-end">Total Nilai</th>
+                        <th class="text-center">Status</th>
+                        <th class="text-center">Aksi</th>
+                    </tr>
+                <?php else: ?>
+                    <tr>
+                        <th>No. Transaksi</th>
+                        <th>Tanggal Penjualan</th>
+                        <th>Customer</th>
+                        <th>Produk</th>
+                        <th class="text-end">Jumlah Terjual</th>
+                        <th class="text-end">Harga Satuan</th>
+                    </tr>
+                <?php endif; ?>
             </thead>
             <tbody>
                 <?php if (empty($sectionSalesHistories)): ?>
                     <tr>
-                        <td colspan="8" class="text-center text-muted py-4">
+                        <td colspan="<?= $activeSection === 'needs' ? '8' : '6' ?>" class="text-center text-muted py-4">
                             <?= $activeSection === 'needs'
                                 ? ($needs_start_date !== null || $needs_product_id !== null
                                     ? 'Tidak ada kebutuhan sales yang sesuai dengan filter.'
                                     : 'Belum ada kebutuhan sales aktif. Input kebutuhan baru melalui tombol di atas.')
-                                : 'Belum ada data penjualan. Input data sales atau unggah CSV melalui panel di atas.' ?>
+                                : ($history_start_date !== null || $history_product_id !== null
+                                    ? 'Tidak ada riwayat penjualan yang sesuai dengan filter.'
+                                    : 'Belum ada penjualan aktual. Input atau impor transaksi penjualan untuk melihat riwayat.') ?>
                         </td>
                     </tr>
                 <?php else: ?>
                     <?php foreach ($sectionSalesHistories as $sh): ?>
                         <tr>
-                            <td class="font-monospace fw-semibold text-primary"><?= htmlspecialchars($sh['doc_number']) ?></td>
-                            <td class="font-monospace text-muted"><?= htmlspecialchars($sh['sale_month']) ?></td>
-                            <td class="fw-semibold text-dark"><?= htmlspecialchars($sh['customer_name']) ?></td>
-                            <td>
-                                <div><?= htmlspecialchars($sh['product_name']) ?></div>
-                                <small class="text-muted font-monospace"><?= htmlspecialchars($sh['product_code']) ?></small>
-                            </td>
-                            <td class="text-end font-monospace fw-bold"><?= number_format((float)$sh['quantity'], 0, ',', '.') ?> <?= htmlspecialchars($sh['product_unit']) ?></td>
-                            <td class="text-end font-monospace">Rp <?= number_format((float)$sh['total_amount'], 0, ',', '.') ?></td>
-                            <td class="text-center">
-                                <?php if ($sh['status'] === 'fulfilled'): ?>
-                                    <span class="badge bg-success-subtle text-success border">Riwayat Aktual</span>
-                                <?php elseif ($sh['status'] === 'confirmed_so'): ?>
-                                    <span class="badge bg-primary-subtle text-primary border">Sales Order (SO)</span>
-                                <?php else: ?>
-                                    <span class="badge bg-warning-subtle text-warning-emphasis border">Quotation</span>
-                                <?php endif; ?>
-                            </td>
-                            <td class="text-center text-nowrap">
-                                <div class="btn-group btn-group-sm">
-                                    <?php if ($sh['status'] === 'quotation'): ?>
-                                        <a href="/forecast-sales/status?id=<?= (int)$sh['id'] ?>&status=confirmed_so&year=<?= (int)$year ?>&section=<?= urlencode($activeSection) ?>" class="btn btn-outline-primary" title="Konfirmasi menjadi SO">SO</a>
-                                    <?php elseif ($sh['status'] === 'confirmed_so'): ?>
-                                        <a href="/forecast-sales/status?id=<?= (int)$sh['id'] ?>&status=fulfilled&year=<?= (int)$year ?>&section=<?= urlencode($activeSection) ?>" class="btn btn-outline-success" title="Tandai Selesai (Riwayat)">Selesai</a>
+                            <?php if ($activeSection === 'needs'): ?>
+                                <td class="font-monospace fw-semibold text-primary"><?= htmlspecialchars($sh['doc_number']) ?></td>
+                                <td class="font-monospace text-muted"><?= htmlspecialchars($sh['sale_month']) ?></td>
+                                <td class="fw-semibold text-dark"><?= htmlspecialchars($sh['customer_name']) ?></td>
+                                <td>
+                                    <div><?= htmlspecialchars($sh['product_name']) ?></div>
+                                    <small class="text-muted font-monospace"><?= htmlspecialchars($sh['product_code']) ?></small>
+                                </td>
+                                <td class="text-end font-monospace fw-bold"><?= number_format((float)$sh['quantity'], 0, ',', '.') ?> <?= htmlspecialchars($sh['product_unit']) ?></td>
+                                <td class="text-end font-monospace">Rp <?= number_format((float)$sh['total_amount'], 0, ',', '.') ?></td>
+                                <td class="text-center">
+                                    <?php if ($sh['status'] === 'confirmed_so'): ?>
+                                        <span class="badge bg-primary-subtle text-primary border">Sales Order (SO)</span>
+                                    <?php else: ?>
+                                        <span class="badge bg-warning-subtle text-warning-emphasis border">Quotation</span>
                                     <?php endif; ?>
-                                    <a href="/forecast-sales/delete-sales?id=<?= (int)$sh['id'] ?>&year=<?= (int)$year ?>&section=<?= urlencode($activeSection) ?>" class="btn btn-outline-danger" onclick="return confirm('Hapus data penjualan <?= htmlspecialchars($sh['doc_number']) ?>?')">
-                                        <i class="fas fa-trash-alt"></i>
-                                    </a>
-                                </div>
-                            </td>
+                                </td>
+                                <td class="text-center text-nowrap">
+                                    <div class="btn-group btn-group-sm">
+                                        <?php if ($sh['status'] === 'quotation'): ?>
+                                            <a href="/forecast-sales/status?id=<?= (int)$sh['id'] ?>&status=confirmed_so&year=<?= (int)$year ?>&section=needs" class="btn btn-outline-primary" title="Konfirmasi menjadi SO">SO</a>
+                                        <?php else: ?>
+                                            <a href="/forecast-sales/status?id=<?= (int)$sh['id'] ?>&status=fulfilled&year=<?= (int)$year ?>&section=needs" class="btn btn-outline-success" title="Tandai Selesai">Selesai</a>
+                                        <?php endif; ?>
+                                        <a href="/forecast-sales/delete-sales?id=<?= (int)$sh['id'] ?>&year=<?= (int)$year ?>&section=needs" class="btn btn-outline-danger" onclick="return confirm('Hapus data penjualan <?= htmlspecialchars($sh['doc_number']) ?>?')">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            <?php else: ?>
+                                <td class="font-monospace fw-semibold text-primary"><?= htmlspecialchars($sh['doc_number']) ?></td>
+                                <td class="font-monospace text-muted"><?= htmlspecialchars(date('d-m-Y', strtotime($sh['sale_date']))) ?></td>
+                                <td class="fw-semibold text-dark"><?= htmlspecialchars($sh['customer_name']) ?></td>
+                                <td>
+                                    <div><?= htmlspecialchars($sh['product_name']) ?></div>
+                                    <small class="text-muted font-monospace"><?= htmlspecialchars($sh['product_code']) ?></small>
+                                </td>
+                                <td class="text-end font-monospace fw-bold"><?= number_format((float)$sh['quantity'], 0, ',', '.') ?> <?= htmlspecialchars($sh['product_unit']) ?></td>
+                                <td class="text-end font-monospace">Rp <?= number_format((float)$sh['unit_price'], 0, ',', '.') ?></td>
+                            <?php endif; ?>
                         </tr>
                     <?php endforeach; ?>
                 <?php endif; ?>
@@ -593,6 +679,29 @@ function calcTotal12m() {
 
 document.addEventListener('DOMContentLoaded', () => {
     if (typeof Chart === 'undefined') return;
+    const historyChart = document.getElementById('monthlySalesHistoryChart');
+    if (historyChart) {
+        new Chart(historyChart, {
+            type: 'bar',
+            data: {
+                labels: <?= json_encode($monthLabels) ?>,
+                datasets: [{
+                    label: 'Penjualan Aktual (Unit)',
+                    data: <?= json_encode($monthly_actual_totals) ?>,
+                    backgroundColor: 'rgba(37, 99, 235, 0.75)',
+                    borderColor: '#2563eb',
+                    borderWidth: 1,
+                    borderRadius: 5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom' } },
+                scales: { y: { beginAtZero: true } }
+            }
+        });
+    }
     ['salesForecastOverviewChart', 'salesForecastChart'].forEach((chartId) => {
         const ctx = document.getElementById(chartId);
         if (!ctx) return;
