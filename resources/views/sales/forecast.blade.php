@@ -7,7 +7,7 @@ $monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', '
 <!-- Page Header -->
 <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
     <div>
-        <h3 class="fw-bold mb-1 text-dark">Input Data Sales &amp; Forecast Sales 12 Bulan</h3>
+        <h3 class="fw-bold mb-1 text-dark">Sales &amp; Forecast</h3>
         <p class="text-muted small mb-0">
             Masukkan riwayat penjualan aktual (manual atau impor CSV) &amp; Quotation/SO &rarr; hitung <strong>Forecast Sales 12 Bulan</strong> otomatis &rarr; cek kesiapan Formula BOM &amp; Raw Material.
         </p>
@@ -40,7 +40,7 @@ $monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', '
     <div class="col-12 col-sm-6 col-xl-3">
         <div class="card border-0 shadow-sm stat-card border-start border-4 border-primary h-100">
             <div class="card-body">
-                <div class="text-muted small fw-semibold text-uppercase">Data Riwayat Penjualan</div>
+                <div class="text-muted small fw-semibold">Data Riwayat Penjualan</div>
                 <div class="fs-4 fw-bold font-monospace text-primary mt-1"><?= (int)$total_sales_records ?> <small class="fs-6 fw-normal text-muted">Transaksi</small></div>
                 <small class="text-muted">Total volume: <?= number_format((float)$total_sales_qty, 0, ',', '.') ?> Unit</small>
             </div>
@@ -49,7 +49,7 @@ $monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', '
     <div class="col-12 col-sm-6 col-xl-3">
         <div class="card border-0 shadow-sm stat-card border-start border-4 border-success h-100">
             <div class="card-body">
-                <div class="text-muted small fw-semibold text-uppercase">Total Forecast 12 Bln (<?= (int)$year ?>)</div>
+                <div class="text-muted small fw-semibold">Total Forecast 12 Bln (<?= (int)$year ?>)</div>
                 <div class="fs-4 fw-bold font-monospace text-success mt-1"><?= number_format((float)$total_12m_forecast, 0, ',', '.') ?> <small class="fs-6 fw-normal text-muted">Unit</small></div>
                 <small class="text-muted"><?= count($forecasts) ?> produk ter-forecast</small>
             </div>
@@ -58,7 +58,7 @@ $monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', '
     <div class="col-12 col-sm-6 col-xl-3">
         <div class="card border-0 shadow-sm stat-card border-start border-4 border-danger h-100">
             <div class="card-body">
-                <div class="text-muted small fw-semibold text-uppercase">Perlu Tindak Lanjut Formula / RM</div>
+                <div class="text-muted small fw-semibold">Perlu Tindak Lanjut Formula / RM</div>
                 <div class="fs-4 fw-bold font-monospace text-danger mt-1"><?= (int)$shortage_products_count ?> <small class="fs-6 fw-normal text-muted">Produk</small></div>
                 <small class="text-muted">Formula belum ada atau RM kurang</small>
             </div>
@@ -67,7 +67,7 @@ $monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', '
     <div class="col-12 col-sm-6 col-xl-3">
         <div class="card border-0 shadow-sm stat-card border-start border-4 border-info h-100">
             <div class="card-body">
-                <div class="text-muted small fw-semibold text-uppercase">Quotation &amp; SO Aktif</div>
+                <div class="text-muted small fw-semibold">Quotation &amp; SO Aktif</div>
                 <div class="fs-4 fw-bold font-monospace text-info mt-1"><?= (int)$open_quotation_so ?> <small class="fs-6 fw-normal text-muted">Dokumen</small></div>
                 <small class="text-muted">Tersinkron ke kebutuhan sales</small>
             </div>

@@ -5,7 +5,7 @@ $pageTitle = 'Master Produk Jadi DKJ';
 
 <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
     <div>
-        <h3 class="fw-bold mb-1 text-dark">Master Produk Jadi PT Dunia Kimia Jaya Gresik</h3>
+        <h3 class="fw-bold mb-1 text-dark">Persediaan Produk Jadi</h3>
         <p class="text-muted small mb-0">
             Daftar produk kimia hasil produksi (koagulan, flokulan, penetral pH) beserta standar batch size dan status formula BOM.
         </p>

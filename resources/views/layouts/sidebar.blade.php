@@ -52,7 +52,7 @@ $currentRole = AccessControl::getCurrentRole();
         </a>
         <?php if (AccessControl::canAccessDivision(AccessControl::ROLE_PPIC)): ?>
             <a href="/forecast-sales" class="list-group-item list-group-item-action bg-transparent text-light <?= isActive('/forecast-sales', $currentUri) ?>">
-                <i class="fas fa-chart-line me-2 text-success"></i> Data Sales &amp; Forecast 12 Bln
+                <i class="fas fa-chart-line me-2 text-success"></i>Sales &amp; Forecast
             </a>
         <?php endif; ?>
 
@@ -62,13 +62,13 @@ $currentRole = AccessControl::getCurrentRole();
                 <i class="fas fa-flask-vial text-warning me-1"></i> Finish Good &amp; Formula (R&amp;D)
             </div>
             <a href="/master/products" class="list-group-item list-group-item-action bg-transparent text-light <?= isActive('/master/products', $currentUri) ?>">
-                <i class="fas fa-box-open me-2 text-info"></i> Cek Finish Good (Produk)
+                <i class="fas fa-box-open me-2 text-info"></i>Finish Good (Produk)
             </a>
             <a href="/master/boms" class="list-group-item list-group-item-action bg-transparent text-light <?= isActive('/master/boms', $currentUri) ?>">
-                <i class="fas fa-sitemap me-2 text-warning"></i> Formula Material &amp; R&amp;D AI
+                <i class="fas fa-sitemap me-2 text-warning"></i> Formula &amp; R&amp;D
             </a>
             <a href="/master/materials" class="list-group-item list-group-item-action bg-transparent text-light <?= isActive('/master/materials', $currentUri) ?>">
-                <i class="fas fa-flask me-2 text-primary"></i> Master Material &amp; Safety Stock
+                <i class="fas fa-flask me-2 text-primary"></i> Raw Material &amp; Safety Stock
             </a>
         <?php endif; ?>
 
@@ -82,21 +82,6 @@ $currentRole = AccessControl::getCurrentRole();
             </a>
         <?php endif; ?>
 
-        <!-- Tahap Purchasing Evaluasi Vendor & PO -->
-        <?php if (AccessControl::canAccessDivision(AccessControl::ROLE_PURCHASING)): ?>
-            <div class="sidebar-label px-4 pt-3 pb-1 text-uppercase text-secondary fw-semibold" style="font-size: 11px;">
-                <i class="fas fa-shopping-cart text-success me-1"></i> Purchasing &amp; Evaluasi Vendor
-            </div>
-            <a href="/purchasing/pr" class="list-group-item list-group-item-action bg-transparent text-light <?= isActive('/purchasing/pr', $currentUri) ?>">
-                <i class="fas fa-file-invoice-dollar me-2 text-success"></i> Rekomendasi PR &amp; Vendor
-            </a>
-            <a href="/master/suppliers" class="list-group-item list-group-item-action bg-transparent text-light <?= isActive('/master/suppliers', $currentUri) ?>">
-                <i class="fas fa-handshake me-2 text-warning"></i> Data Vendor (Harga, MOQ)
-            </a>
-            <a href="/purchasing/po" class="list-group-item list-group-item-action bg-transparent text-light <?= isActive('/purchasing/po', $currentUri) ?>">
-                <i class="fas fa-file-contract me-2 text-teal" style="color: #14b8a6;"></i> Terbitkan PO Resmi
-            </a>
-        <?php endif; ?>
 
         <!-- Pengaturan Sistem (Khusus PPIC / Super Admin) -->
         <?php if ($isSuperAdmin): ?>
