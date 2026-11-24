@@ -1,9 +1,9 @@
 @php
-$activeSection = $_GET['section'] ?? 'overview';
-if (!in_array($activeSection, ['overview', 'needs', 'history', 'forecast'], true)) {
-    $activeSection = 'overview';
+$activeSection = $_GET['section'] ?? 'needs';
+if (!in_array($activeSection, ['needs', 'history'], true)) {
+    $activeSection = 'needs';
 }
-$pageTitle = 'Sales & Forecast';
+$pageTitle = 'Pusat Kebutuhan & Forecast PPIC';
 $monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
 $sectionSalesHistories = $activeSection === 'needs'
     ? $needs_histories
@@ -15,69 +15,26 @@ $sectionSalesHistories = $activeSection === 'needs'
     <div class="card-body p-3 p-md-4">
         <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
             <div>
-                <h5 class="fw-bold mb-1 text-dark"><i class="fas fa-chart-line text-primary me-2"></i>Sales &amp; Forecast</h5>
-                <p class="text-muted small mb-0">Kelola kebutuhan penjualan, riwayat penjualan, dan perencanaan forecast.</p>
+                <h5 class="fw-bold mb-1 text-dark"><i class="fas fa-chart-line text-primary me-2"></i>Pusat Kebutuhan &amp; Forecast PPIC</h5>
+                <p class="text-muted small mb-0">Pantau permintaan pelanggan, hasil forecast, dan evaluasi realisasi dalam satu halaman.</p>
             </div>
         </div>
         <nav class="row g-2 border-top pt-3" aria-label="Navigasi Sales & Forecast">
-            <div class="col-12 col-md-4">
+            <div class="col-12 col-md-6">
                 <a href="/forecast-sales?section=needs&year=<?= (int)$year ?>" class="btn w-100 py-2 <?= $activeSection === 'needs' ? 'btn-primary' : 'btn-light' ?>">
-                    <i class="fas fa-clipboard-list me-2"></i>Kebutuhan Sales
+                    <i class="fas fa-layer-group me-2"></i>Kebutuhan &amp; Forecast
                 </a>
             </div>
-            <div class="col-12 col-md-4">
+            <div class="col-12 col-md-6">
                 <a href="/forecast-sales?section=history&year=<?= (int)$year ?>" class="btn w-100 py-2 <?= $activeSection === 'history' ? 'btn-primary' : 'btn-light' ?>">
                     <i class="fas fa-clock-rotate-left me-2"></i>Riwayat Penjualan
-                </a>
-            </div>
-            <div class="col-12 col-md-4">
-                <a href="/forecast-sales?section=forecast&year=<?= (int)$year ?>" class="btn w-100 py-2 <?= $activeSection === 'forecast' ? 'btn-primary' : 'btn-light' ?>">
-                    <i class="fas fa-chart-column me-2"></i>Forecast 12 Bulan
                 </a>
             </div>
         </nav>
     </div>
 </div>
 
-<?php if ($activeSection === 'overview'): ?>
-    <h6 class="fw-bold text-dark mb-2">Ringkasan Sales</h6>
-    <div class="row g-2 mb-2">
-        <div class="col-12 col-sm-6">
-            <div class="card h-100"><div class="card-body p-3">
-                <div class="small text-muted">Total Kebutuhan Sales</div>
-                <div class="fs-5 fw-semibold text-dark mt-1"><?= (int)$open_quotation_so ?> dokumen</div>
-                <small class="text-muted">Quotation dan Sales Order aktif</small>
-            </div></div>
-        </div>
-        <div class="col-12 col-sm-6">
-            <div class="card h-100"><div class="card-body p-3">
-                <div class="small text-muted">Total Penjualan Aktual</div>
-                <div class="fs-5 fw-semibold text-dark mt-1"><?= number_format((float)$total_actual_sales_qty, 0, ',', '.') ?> unit</div>
-                <small class="text-muted">Berdasarkan transaksi yang selesai</small>
-            </div></div>
-        </div>
-        <div class="col-12 col-sm-6">
-            <div class="card h-100"><div class="card-body p-3">
-                <div class="small text-muted">Total Forecast</div>
-                <div class="fs-5 fw-semibold text-dark mt-1"><?= number_format((float)$total_12m_forecast, 0, ',', '.') ?> unit</div>
-                <small class="text-muted">Periode 12 bulan tahun <?= (int)$year ?></small>
-            </div></div>
-        </div>
-        <div class="col-12 col-sm-6">
-            <div class="card h-100"><div class="card-body p-3">
-                <div class="small text-muted">Status Forecast</div>
-                <div class="fs-5 fw-semibold text-dark mt-1"><?= count($forecasts) ?> produk</div>
-                <small class="text-muted">Tersedia untuk tahun <?= (int)$year ?></small>
-            </div></div>
-        </div>
-    </div>
-    <div class="card mb-4">
-        <div class="card-body p-3">
-            <h6 class="fw-bold mb-2">Tren Penjualan &amp; Forecast</h6>
-            <div style="height: 190px;"><canvas id="salesForecastOverviewChart"></canvas></div>
-        </div>
-    </div>
-<?php elseif ($activeSection === 'needs'): ?>
+<?php if ($activeSection === 'needs'): ?>
     <div class="row g-2 mb-3">
         <div class="col-12 col-sm-4">
             <div class="card h-100">
@@ -110,41 +67,247 @@ $sectionSalesHistories = $activeSection === 'needs'
     <div class="card mb-4">
         <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
             <div>
-                <h6 class="fw-bold mb-1">Kebutuhan Sales</h6>
-                <p class="text-muted small mb-0">Catat kebutuhan pelanggan, quotation, dan Sales Order untuk perencanaan produksi.</p>
+                <h6 class="fw-bold mb-1">Data Kebutuhan &amp; Forecast</h6>
+                <p class="text-muted small mb-0">Forecast ditampilkan per bulan sebagai prediksi, bukan dokumen pesanan pelanggan.</p>
             </div>
-            <button class="btn btn-primary btn-sm px-3" data-bs-toggle="modal" data-bs-target="#modalAddSales">
-                <i class="fas fa-plus-circle me-1"></i> Input Kebutuhan Sales
-            </button>
-        </div>
-    </div>
-<?php elseif ($activeSection === 'forecast'): ?>
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-        <h6 class="fw-bold mb-0">Forecast 12 Bulan</h6>
-        <div class="d-flex flex-wrap gap-2">
-            <form method="GET" action="/forecast-sales" class="d-flex align-items-center gap-1">
-                <input type="hidden" name="section" value="forecast">
-                <select name="year" class="form-select form-select-sm" onchange="this.form.submit()">
-                    <?php for ($y = (int)date('Y') - 1; $y <= (int)date('Y') + 2; $y++): ?>
-                        <option value="<?= $y ?>" <?= $y === (int)$year ? 'selected' : '' ?>>Tahun <?= $y ?></option>
-                    <?php endfor; ?>
-                </select>
-            </form>
-            <form action="/forecast-sales/generate" method="POST" class="d-inline">
-                <input type="hidden" name="forecast_year" value="<?= (int)$year ?>">
-                <button type="submit" class="btn btn-success btn-sm"><i class="fas fa-wand-magic-sparkles me-1"></i> Generate Forecast</button>
-            </form>
-            <button class="btn btn-outline-dark btn-sm" data-bs-toggle="modal" data-bs-target="#modalManualForecast">
-                <i class="fas fa-calendar-edit me-1"></i> Input Manual
-            </button>
+            <div class="d-flex flex-wrap gap-2">
+                <button class="btn btn-primary btn-sm px-3" data-bs-toggle="modal" data-bs-target="#modalAddSales">
+                    <i class="fas fa-plus-circle me-1"></i> Input Kebutuhan Sales
+                </button>
+                <form action="/forecast-sales/generate" method="POST" class="d-inline">
+                    <input type="hidden" name="forecast_year" value="<?= (int)$year ?>">
+                    <input type="hidden" name="redirect_section" value="needs">
+                    <button type="submit" class="btn btn-success btn-sm">
+                        <i class="fas fa-wand-magic-sparkles me-1"></i> Generate Forecast <?= (int)$year ?>
+                    </button>
+                </form>
+                <button class="btn btn-outline-dark btn-sm" data-bs-toggle="modal" data-bs-target="#modalManualForecast">
+                    <i class="fas fa-calendar-edit me-1"></i> Input Forecast
+                </button>
+            </div>
         </div>
     </div>
 <?php endif; ?>
 
-<!-- Panel Impor CSV Data Penjualan Aktual + Grafik Forecast 12 Bulan -->
-<?php if (in_array($activeSection, ['history', 'forecast'], true)): ?>
+<?php if ($activeSection === 'needs'): ?>
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white py-3">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
+            <div>
+                <span class="fw-bold"><i class="fas fa-table-list text-primary me-2"></i>Daftar Kebutuhan Sales &amp; Forecast</span>
+                <div class="small text-muted">Quotation/SO adalah permintaan pelanggan; Forecast adalah prediksi model.</div>
+            </div>
+            <span class="badge bg-light text-dark border"><?= number_format((int)$combined_total, 0, ',', '.') ?> data</span>
+        </div>
+    </div>
+    <div class="px-3 py-3 bg-light border-bottom">
+        <form method="GET" action="/forecast-sales" class="row g-2 align-items-end">
+            <input type="hidden" name="section" value="needs">
+            <div class="col-6 col-md-2">
+                <label for="combinedSource" class="form-label small fw-semibold mb-1">Sumber</label>
+                <select id="combinedSource" name="source" class="form-select form-select-sm">
+                    <option value="all" <?= $source_filter === 'all' ? 'selected' : '' ?>>Semua</option>
+                    <option value="sales" <?= $source_filter === 'sales' ? 'selected' : '' ?>>Kebutuhan Sales</option>
+                    <option value="forecast" <?= $source_filter === 'forecast' ? 'selected' : '' ?>>Forecast</option>
+                </select>
+            </div>
+            <div class="col-6 col-md-2">
+                <label for="periodStart" class="form-label small fw-semibold mb-1">Periode Mulai</label>
+                <input type="month" id="periodStart" name="period_start" class="form-control form-control-sm" value="<?= htmlspecialchars($period_start ?? '') ?>">
+            </div>
+            <div class="col-6 col-md-2">
+                <label for="periodEnd" class="form-label small fw-semibold mb-1">Periode Akhir</label>
+                <input type="month" id="periodEnd" name="period_end" class="form-control form-control-sm" value="<?= htmlspecialchars($period_end ?? '') ?>">
+            </div>
+            <div class="col-6 col-md-2">
+                <label for="combinedProduct" class="form-label small fw-semibold mb-1">Produk</label>
+                <select id="combinedProduct" name="product_id" class="form-select form-select-sm">
+                    <option value="">Semua Produk</option>
+                    <?php foreach ($products as $product): ?>
+                        <option value="<?= (int)$product['id'] ?>" <?= (int)$selected_product_id === (int)$product['id'] ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($product['code'] . ' — ' . $product['name']) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="col-8 col-md-2">
+                <label for="combinedSearch" class="form-label small fw-semibold mb-1">Search</label>
+                <input type="search" id="combinedSearch" name="search" class="form-control form-control-sm" value="<?= htmlspecialchars($search) ?>" placeholder="Produk, pelanggan, ID...">
+            </div>
+            <div class="col-4 col-md-2 d-flex gap-1">
+                <button type="submit" class="btn btn-primary btn-sm flex-grow-1"><i class="fas fa-filter me-1"></i>Filter</button>
+                <a href="/forecast-sales?section=needs" class="btn btn-outline-secondary btn-sm" title="Reset filter"><i class="fas fa-rotate-left"></i></a>
+            </div>
+        </form>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 small" id="combinedNeedsTable">
+            <thead class="table-light">
+                <tr>
+                    <th>ID Kebutuhan</th>
+                    <th>Nama Produk</th>
+                    <th class="text-end">Jumlah Kebutuhan</th>
+                    <th>Periode/Tanggal</th>
+                    <th>Sumber Kebutuhan</th>
+                    <th>Status</th>
+                    <th class="text-center">Aksi/Detail</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php if (empty($combined_rows)): ?>
+                    <tr><td colspan="7" class="text-center text-muted py-4">Tidak ada data yang sesuai dengan filter.</td></tr>
+                <?php else: ?>
+                    <?php foreach ($combined_rows as $row): ?>
+                        <tr>
+                            <td class="font-monospace fw-semibold <?= $row['source'] === 'forecast' ? 'text-success' : 'text-primary' ?>"><?= htmlspecialchars($row['display_id']) ?></td>
+                            <td>
+                                <div class="fw-semibold text-dark"><?= htmlspecialchars($row['product_name']) ?></div>
+                                <small class="text-muted font-monospace"><?= htmlspecialchars($row['product_code']) ?></small>
+                                <?php if ($row['source'] === 'sales'): ?>
+                                    <div class="small text-muted"><?= htmlspecialchars($row['customer_name']) ?></div>
+                                <?php endif; ?>
+                            </td>
+                            <td class="text-end font-monospace fw-bold text-nowrap">
+                                <?= number_format((float)$row['quantity'], 0, ',', '.') ?> <?= htmlspecialchars($row['product_unit']) ?>
+                            </td>
+                            <td class="font-monospace text-nowrap">
+                                <?php if ($row['source'] === 'sales'): ?>
+                                    <?= htmlspecialchars(date('d-m-Y', strtotime($row['date']))) ?>
+                                    <div class="small text-muted"><?= htmlspecialchars($row['period']) ?></div>
+                                <?php else: ?>
+                                    <?= htmlspecialchars($row['period']) ?>
+                                <?php endif; ?>
+                            </td>
+                            <td>
+                                <?php if ($row['source'] === 'forecast'): ?>
+                                    <span class="badge bg-success-subtle text-success border"><i class="fas fa-chart-line me-1"></i>Forecast</span>
+                                <?php else: ?>
+                                    <span class="badge bg-primary-subtle text-primary border"><i class="fas fa-file-signature me-1"></i>Kebutuhan Sales</span>
+                                <?php endif; ?>
+                            </td>
+                            <td>
+                                <?php if ($row['source'] === 'forecast'): ?>
+                                    <span class="badge bg-success-subtle text-success border">Prediksi</span>
+                                <?php elseif ($row['status'] === 'quotation'): ?>
+                                    <span class="badge bg-warning-subtle text-warning-emphasis border">Quotation</span>
+                                <?php elseif ($row['status'] === 'confirmed_so'): ?>
+                                    <span class="badge bg-primary-subtle text-primary border">Sales Order (SO)</span>
+                                <?php elseif ($row['doc_type'] === 'sales_order'): ?>
+                                    <span class="badge bg-secondary-subtle text-secondary border">SO Selesai</span>
+                                <?php elseif ($row['doc_type'] === 'quotation'): ?>
+                                    <span class="badge bg-secondary-subtle text-secondary border">Quotation Selesai</span>
+                                <?php else: ?>
+                                    <span class="badge bg-secondary-subtle text-secondary border">Selesai</span>
+                                <?php endif; ?>
+                            </td>
+                            <td class="text-center">
+                                <div class="d-flex justify-content-center align-items-center gap-1">
+                                    <details class="text-start">
+                                        <summary class="btn btn-outline-secondary btn-sm py-1">Detail</summary>
+                                        <div class="position-absolute bg-white border rounded shadow p-2 text-start small" style="z-index: 5; min-width: 240px; max-width: 320px;">
+                                            <?php if ($row['source'] === 'forecast'): ?>
+                                                <div><strong>Model:</strong> <?= htmlspecialchars($row['method']) ?></div>
+                                                <div><strong>Periode model:</strong> <?= htmlspecialchars($row['period']) ?></div>
+                                                <div><strong>Catatan:</strong> <?= htmlspecialchars($row['notes'] ?: 'Tidak ada catatan.') ?></div>
+                                            <?php else: ?>
+                                                <div><strong>Dokumen:</strong> <?= htmlspecialchars($row['display_id']) ?></div>
+                                                <div><strong>Jenis:</strong> <?= $row['doc_type'] === 'sales_order' ? 'Sales Order (SO)' : 'Quotation' ?></div>
+                                                <div><strong>Pelanggan:</strong> <?= htmlspecialchars($row['customer_name']) ?></div>
+                                                <div><strong>Total nilai:</strong> Rp <?= number_format((float)$row['total_amount'], 0, ',', '.') ?></div>
+                                                <div><strong>Catatan:</strong> <?= htmlspecialchars($row['notes'] ?: 'Tidak ada catatan.') ?></div>
+                                            <?php endif; ?>
+                                        </div>
+                                    </details>
+                                    <?php if ($row['source'] === 'sales'): ?>
+                                        <div class="btn-group btn-group-sm">
+                                            <?php if ($row['status'] === 'quotation'): ?>
+                                                <a href="/forecast-sales/status?id=<?= (int)$row['id'] ?>&status=confirmed_so&year=<?= (int)$year ?>&section=needs" class="btn btn-outline-primary" title="Konfirmasi menjadi SO">SO</a>
+                                            <?php elseif ($row['status'] === 'confirmed_so'): ?>
+                                                <a href="/forecast-sales/status?id=<?= (int)$row['id'] ?>&status=fulfilled&year=<?= (int)$year ?>&section=needs" class="btn btn-outline-success" title="Tandai selesai">Selesai</a>
+                                            <?php endif; ?>
+                                            <a href="/forecast-sales/delete-sales?id=<?= (int)$row['id'] ?>&year=<?= (int)$year ?>&section=needs" class="btn btn-outline-danger" title="Hapus" onclick="return confirm('Hapus data <?= htmlspecialchars($row['display_id']) ?>?')"><i class="fas fa-trash-alt"></i></a>
+                                        </div>
+                                    <?php else: ?>
+                                        <a href="/forecast-sales/delete-forecast?id=<?= (int)$row['id'] ?>&year=<?= (int)substr($row['period'], 0, 4) ?>&section=needs" class="btn btn-outline-danger btn-sm" title="Hapus forecast" onclick="return confirm('Hapus seluruh forecast tahunan produk ini?')"><i class="fas fa-trash-alt"></i></a>
+                                    <?php endif; ?>
+                                </div>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
+    <?php if ($combined_last_page > 1): ?>
+        <div class="card-footer bg-white d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <small class="text-muted">Halaman <?= (int)$combined_page ?> dari <?= (int)$combined_last_page ?></small>
+            <nav aria-label="Pagination kebutuhan dan forecast">
+                <ul class="pagination pagination-sm mb-0">
+                    <?php for ($pageNumber = 1; $pageNumber <= $combined_last_page; $pageNumber++): ?>
+                        <?php $pageQuery = $_GET; $pageQuery['page'] = $pageNumber; ?>
+                        <li class="page-item <?= $pageNumber === (int)$combined_page ? 'active' : '' ?>">
+                            <a class="page-link" href="/forecast-sales?<?= htmlspecialchars(http_build_query($pageQuery), ENT_QUOTES, 'UTF-8') ?>"><?= $pageNumber ?></a>
+                        </li>
+                    <?php endfor; ?>
+                </ul>
+            </nav>
+        </div>
+    <?php endif; ?>
+</div>
+
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end gap-2 mb-2">
+    <div>
+        <h6 class="fw-bold text-dark mb-1"><i class="fas fa-scale-balanced text-primary me-2"></i>Evaluasi Forecast vs Realisasi</h6>
+        <div class="small text-muted">Realisasi dihitung dari Sales Order dan penjualan yang selesai; Quotation tidak dihitung sebagai realisasi.</div>
+    </div>
+    <span class="small text-muted">Selisih = Forecast − Realisasi; error = |selisih| ÷ nilai terbesar</span>
+</div>
+<div class="row g-2 mb-3">
+    <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body p-3"><div class="small text-muted">Total Forecast</div><div class="fs-5 fw-bold text-success"><?= number_format((float)$evaluation_summary['forecast_total'], 0, ',', '.') ?></div></div></div></div>
+    <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body p-3"><div class="small text-muted">Total Realisasi</div><div class="fs-5 fw-bold text-primary"><?= number_format((float)$evaluation_summary['realization_total'], 0, ',', '.') ?></div></div></div></div>
+    <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body p-3"><div class="small text-muted">Total Selisih</div><div class="fs-5 fw-bold <?= $evaluation_summary['difference_total'] > 0 ? 'text-danger' : ($evaluation_summary['difference_total'] < 0 ? 'text-warning-emphasis' : 'text-success') ?>"><?= number_format((float)$evaluation_summary['difference_total'], 0, ',', '.') ?></div></div></div></div>
+    <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body p-3"><div class="small text-muted">Rata-rata Error / Accuracy</div><div class="fs-5 fw-bold text-dark"><?= number_format((float)$evaluation_summary['average_error'], 2, ',', '.') ?>% <small class="fs-6 text-muted">error</small></div><small class="text-muted">Akurasi <?= number_format((float)$evaluation_summary['accuracy'], 2, ',', '.') ?>%</small></div></div></div>
+</div>
+<div class="row g-3 mb-4">
+    <div class="col-12 col-xl-6"><div class="card h-100"><div class="card-header bg-white fw-semibold">Forecast vs Realisasi per Periode (Jumlah)</div><div class="card-body"><div style="height:260px"><canvas id="forecastActualBarChart"></canvas></div></div></div></div>
+    <div class="col-12 col-xl-6"><div class="card h-100"><div class="card-header bg-white fw-semibold">Tren Forecast &amp; Realisasi</div><div class="card-body"><div style="height:260px"><canvas id="forecastActualLineChart"></canvas></div></div></div></div>
+</div>
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white py-3 fw-bold"><i class="fas fa-magnifying-glass-chart text-primary me-2"></i>Rincian Evaluasi &amp; AI Insight</div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 small">
+            <thead class="table-light">
+                <tr>
+                    <th>Nama Produk</th><th>Periode Forecast</th><th class="text-end">Jumlah Forecast</th><th class="text-end">Jumlah Realisasi</th><th class="text-end">Selisih</th><th class="text-end">Persentase Error</th><th>Keterangan Evaluasi</th><th>Aksi/Detail</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php if (empty($evaluation_rows)): ?>
+                    <tr><td colspan="8" class="text-center text-muted py-4">Belum ada data forecast yang sesuai dengan filter untuk dievaluasi.</td></tr>
+                <?php else: ?>
+                    <?php foreach ($evaluation_rows as $row): ?>
+                        <?php $evaluationClass = $row['evaluation'] === 'Overforecast' ? 'danger' : ($row['evaluation'] === 'Underforecast' ? 'warning text-dark' : 'success'); ?>
+                        <tr>
+                            <td><div class="fw-semibold"><?= htmlspecialchars($row['product_name']) ?></div><small class="text-muted font-monospace"><?= htmlspecialchars($row['product_code']) ?></small></td>
+                            <td class="font-monospace"><?= htmlspecialchars($row['period']) ?></td>
+                            <td class="text-end font-monospace"><?= number_format((float)$row['forecast_quantity'], 0, ',', '.') ?> <?= htmlspecialchars($row['product_unit']) ?></td>
+                            <td class="text-end font-monospace"><?= number_format((float)$row['realization_quantity'], 0, ',', '.') ?> <?= htmlspecialchars($row['product_unit']) ?></td>
+                            <td class="text-end font-monospace fw-bold <?= $row['difference'] > 0 ? 'text-danger' : ($row['difference'] < 0 ? 'text-warning-emphasis' : 'text-success') ?>"><?= number_format((float)$row['difference'], 0, ',', '.') ?></td>
+                            <td class="text-end font-monospace"><?= number_format((float)$row['error_percentage'], 2, ',', '.') ?>%</td>
+                            <td><span class="badge bg-<?= $evaluationClass ?>"><?= htmlspecialchars($row['evaluation']) ?></span></td>
+                            <td><details><summary class="btn btn-outline-primary btn-sm">AI Insight</summary><div class="position-absolute bg-white border rounded shadow p-2 small" style="z-index:5; min-width:240px; max-width:320px;"><strong>Insight Evaluasi Otomatis</strong><br><?= htmlspecialchars($row['insight']) ?></div></details></td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
+</div>
+<?php endif; ?>
+
+<!-- Panel Riwayat dan Impor CSV Data Penjualan Aktual -->
+<?php if ($activeSection === 'history'): ?>
 <div class="row g-4 mb-4">
-    <?php if ($activeSection === 'history'): ?>
     <div class="col-12">
         <div class="row g-2">
             <div class="col-12 col-sm-6">
@@ -205,207 +368,11 @@ $sectionSalesHistories = $activeSection === 'needs'
             </div>
         </div>
     </div>
-    <?php endif; ?>
-    <?php if ($activeSection === 'forecast'): ?>
-    <div class="col-12">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                <span class="fw-bold"><i class="fas fa-chart-line text-success me-2"></i> Grafik Riwayat Penjualan Aktual vs Forecast Sales 12 Bulan (<?= (int)$year ?>)</span>
-                <span class="badge bg-light text-muted border">Jan &ndash; Des <?= (int)$year ?></span>
-            </div>
-            <div class="card-body">
-                <div style="height: 235px;">
-                    <canvas id="salesForecastChart"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
-    <?php endif; ?>
-</div>
-<?php endif; ?>
-
-<!-- Matriks Hasil Forecast Sales 12 Bulan -->
-<?php if ($activeSection === 'forecast'): ?>
-<div class="card border-0 shadow-sm mb-4">
-    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-        <div>
-            <span class="fw-bold"><i class="fas fa-calendar-alt text-primary me-2"></i> Hasil Forecast Sales 12 Bulan (Tahun <?= (int)$year ?>)</span>
-            <div class="text-muted small" style="font-size: 11px;">Dihitung otomatis dari pola tren &amp; musiman data riwayat penjualan aktual, atau dapat disesuaikan manual per bulan.</div>
-        </div>
-        <span class="badge bg-primary-subtle text-primary border"><?= count($forecasts) ?> Produk</span>
-    </div>
-    <div class="table-responsive">
-        <table class="table table-sm table-bordered table-hover align-middle mb-0 small">
-            <thead class="table-light text-center">
-                <tr>
-                    <th class="text-start">Produk</th>
-                    <th>Metode</th>
-                    <?php foreach ($monthLabels as $ml): ?>
-                        <th><?= $ml ?></th>
-                    <?php endforeach; ?>
-                    <th>Total 12 Bln</th>
-                    <th>Aksi</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php if (empty($forecasts)): ?>
-                    <tr>
-                        <td colspan="16" class="text-center text-muted py-4">
-                            Belum ada Forecast Sales untuk tahun <?= (int)$year ?>. Silakan input/impor data penjualan lalu klik <strong>Generate Forecast 12 Bln Otomatis</strong> atau <strong>Input Manual 12 Bln</strong>.
-                        </td>
-                    </tr>
-                <?php else: ?>
-                    <?php foreach ($forecasts as $f): ?>
-                        <tr>
-                            <td class="text-nowrap">
-                                <div class="fw-bold text-dark"><?= htmlspecialchars($f['product_name']) ?></div>
-                                <small class="text-muted font-monospace"><?= htmlspecialchars($f['product_code']) ?></small>
-                            </td>
-                            <td class="text-center">
-                                <?php if (str_starts_with((string)$f['method'], 'auto')): ?>
-                                    <span class="badge bg-success-subtle text-success border">Auto AI</span>
-                                <?php else: ?>
-                                    <span class="badge bg-secondary-subtle text-secondary border">Manual</span>
-                                <?php endif; ?>
-                            </td>
-                            <?php for ($m = 1; $m <= 12; $m++): ?>
-                                <td class="text-end font-monospace"><?= number_format((float)$f['m' . $m], 0, ',', '.') ?></td>
-                            <?php endfor; ?>
-                            <td class="text-end font-monospace fw-bold text-primary text-nowrap">
-                                <?= number_format((float)$f['total_12m_qty'], 0, ',', '.') ?> <?= htmlspecialchars($f['product_unit']) ?>
-                            </td>
-                            <td class="text-center">
-                                <a href="/forecast-sales/delete-forecast?id=<?= (int)$f['id'] ?>&year=<?= (int)$year ?>&section=forecast" class="btn btn-outline-danger btn-sm py-0 px-2" onclick="return confirm('Hapus forecast 12 bulan untuk <?= htmlspecialchars($f['product_name']) ?>?')">
-                                    <i class="fas fa-trash-alt"></i>
-                                </a>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </tbody>
-        </table>
-    </div>
-</div>
-<?php endif; ?>
-
-<!-- Cek Formula & Cek Raw Material Otomatis dari Hasil Forecast Sales -->
-<?php if ($activeSection === 'forecast'): ?>
-<div class="card border-0 shadow-sm mb-4">
-    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-        <div>
-            <span class="fw-bold"><i class="fas fa-cubes text-warning me-2"></i> Cek Formula BOM &amp; Ketersediaan Raw Material (Dari Forecast <?= (int)$year ?>)</span>
-            <div class="text-muted small" style="font-size: 11px;">Mengurangi Forecast Sales 12 bulan dengan stok Finish Good, lalu menghitung kebutuhan produksi bersih dan Raw Material berdasarkan formula BOM.</div>
-        </div>
-        <a href="/ai/forecast" class="btn btn-outline-primary btn-sm">
-            <i class="fas fa-wand-magic-sparkles me-1"></i> Buka AI Analisis Material &amp; Harga &rarr;
-        </a>
-    </div>
-    <div class="card-body p-3">
-        <?php if (empty($mrp_evaluations)): ?>
-            <div class="text-center text-muted small py-3">
-                Hasil pengecekan Formula &amp; Raw Material akan muncul otomatis setelah Forecast Sales 12 Bulan dibuat.
-            </div>
-        <?php else: ?>
-            <?php foreach ($mrp_evaluations as $ev): ?>
-                <?php $efc = $ev['forecast']; ?>
-                <div class="border rounded-3 p-3 mb-3 bg-light">
-                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-2">
-                        <div>
-                            <strong class="text-dark"><?= htmlspecialchars($efc['product_name']) ?></strong>
-                            <span class="badge bg-white text-muted border font-monospace ms-1"><?= htmlspecialchars($efc['product_code']) ?></span>
-                            <div class="small text-muted mt-1">
-                                Forecast 12 bulan: <strong class="text-dark font-monospace"><?= number_format((float) $ev['forecast_demand'], 0, ',', '.') ?></strong>
-                                &middot; Stok Finish Good: <strong class="text-dark font-monospace"><?= number_format((float) $ev['finished_good_stock'], 0, ',', '.') ?></strong>
-                                &middot; Produksi bersih: <strong class="text-primary font-monospace"><?= number_format((float) $ev['net_production'], 0, ',', '.') ?> <?= htmlspecialchars($efc['product_unit']) ?></strong>
-                                <?php if ((int) $ev['required_batches'] > 0): ?>
-                                    &middot; <?= (int) $ev['required_batches'] ?> batch
-                                <?php endif; ?>
-                            </div>
-                        </div>
-                        <div class="d-flex gap-2 align-items-center">
-                            <?php if (!$ev['has_formula']): ?>
-                                <span class="badge bg-danger text-white">Formula Belum Tersedia</span>
-                                <a href="/master/boms" class="btn btn-warning btn-sm py-0 text-dark fw-semibold">
-                                    <i class="fas fa-flask-vial me-1"></i> Buat Formula (R&amp;D) &rarr;
-                                </a>
-                            <?php elseif ($ev['rm_status'] === 'not_required'): ?>
-                                <span class="badge bg-success text-white"><i class="fas fa-box me-1"></i> Stok Finish Good Mencukupi</span>
-                            <?php elseif ($ev['rm_status'] === 'available'): ?>
-                                <span class="badge bg-success text-white"><i class="fas fa-check-circle me-1"></i> Raw Material Tersedia</span>
-                            <?php else: ?>
-                                <span class="badge bg-danger text-white"><i class="fas fa-exclamation-triangle me-1"></i> <?= (int)$ev['shortage_count'] ?> Raw Material Kurang</span>
-                            <?php endif; ?>
-                            <?php if ($ev['has_formula']): ?>
-                                <a href="/master/boms/ai-advisor?product_id=<?= (int) $efc['product_id'] ?>" class="btn btn-outline-primary btn-sm py-0">
-                                    <i class="fas fa-wand-magic-sparkles me-1"></i> Evaluasi Alternatif
-                                </a>
-                            <?php elseif (!empty($ev['alternative_boms'])): ?>
-                                <a href="/master/boms/ai-advisor?product_id=<?= (int) $efc['product_id'] ?>" class="btn btn-outline-primary btn-sm py-0">
-                                    <i class="fas fa-list-check me-1"></i> Tinjau Formula Tersimpan
-                                </a>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-
-                    <?php if (!empty($ev['alternative_boms'])): ?>
-                        <?php $recommendedAlternative = $ev['alternative_boms'][0]; ?>
-                        <div class="alert alert-info py-2 px-3 small mb-3">
-                            <strong><i class="fas fa-lightbulb me-1"></i> Rekomendasi formula alternatif tersimpan:</strong>
-                            <?= htmlspecialchars($recommendedAlternative['bom']['version']) ?>
-                            &mdash;
-                            <?php if ($recommendedAlternative['shortage_count'] === 0): ?>
-                                seluruh bahan formula tercukupi untuk rencana ini
-                            <?php else: ?>
-                                <?= (int) $recommendedAlternative['shortage_count'] ?> bahan masih defisit
-                            <?php endif; ?>
-                            (estimasi nilai kebutuhan bahan: Rp <?= number_format((float) $recommendedAlternative['estimated_replenishment_cost'], 0, ',', '.') ?>).
-                            <span class="text-muted">Periksa dan validasi formula alternatif bersama R&amp;D sebelum digunakan.</span>
-                        </div>
-                    <?php endif; ?>
-
-                    <?php if ($ev['has_formula'] && !empty($ev['rm_requirements'])): ?>
-                        <div class="table-responsive">
-                            <table class="table table-sm table-bordered bg-white align-middle mb-0 small">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Raw Material</th>
-                                        <th class="text-end">Kebutuhan Rencana</th>
-                                        <th class="text-end">Stok Bebas</th>
-                                        <th class="text-end">Kekurangan</th>
-                                        <th class="text-end">Rekomendasi Jumlah Tambahan</th>
-                                        <th>Supplier &amp; Lead Time (Acuan)</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($ev['rm_requirements'] as $rm): ?>
-                                        <tr>
-                                            <td class="fw-semibold text-dark"><?= htmlspecialchars($rm['material_name']) ?> <small class="text-muted font-monospace">(<?= htmlspecialchars($rm['material_code']) ?>)</small></td>
-                                            <td class="text-end font-monospace"><?= number_format((float)$rm['needed_12m'], 1, ',', '.') ?> <?= htmlspecialchars($rm['unit']) ?></td>
-                                            <td class="text-end font-monospace <?= $rm['shortage_qty'] > 0 ? 'text-danger fw-bold' : 'text-success fw-bold' ?>">
-                                                <?= number_format((float)$rm['available_stock'], 1, ',', '.') ?> <?= htmlspecialchars($rm['unit']) ?>
-                                            </td>
-                                            <td class="text-end font-monospace fw-bold <?= $rm['shortage_qty'] > 0 ? 'text-danger' : 'text-muted' ?>">
-                                                <?= $rm['shortage_qty'] > 0 ? '-' . number_format((float)$rm['shortage_qty'], 1, ',', '.') . ' ' . htmlspecialchars($rm['unit']) : '0' ?>
-                                            </td>
-                                            <td class="text-end font-monospace fw-semibold">
-                                                <?= number_format((float)$rm['recommended_qty'], 1, ',', '.') ?> <?= htmlspecialchars($rm['unit']) ?>
-                                            </td>
-                                            <td class="text-muted"><?= htmlspecialchars($rm['supplier_name']) ?> (<?= (int)$rm['lead_time_days'] ?> hr)</td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    <?php endif; ?>
-                </div>
-            <?php endforeach; ?>
-        <?php endif; ?>
-    </div>
 </div>
 <?php endif; ?>
 
 <!-- Tabel Riwayat Data Sales, Quotation & SO -->
-<?php if (in_array($activeSection, ['needs', 'history'], true)): ?>
+<?php if ($activeSection === 'history'): ?>
 <div class="card border-0 shadow-sm mb-4">
     <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
         <span class="fw-bold"><i class="fas <?= $activeSection === 'needs' ? 'fa-clipboard-list text-primary' : 'fa-history text-info' ?> me-2"></i>
@@ -636,7 +603,7 @@ $sectionSalesHistories = $activeSection === 'needs'
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <form action="/forecast-sales/store-forecast" method="POST">
-                <input type="hidden" name="redirect_section" value="forecast">
+                <input type="hidden" name="redirect_section" value="needs">
                 <div class="modal-header">
                     <h6 class="modal-title fw-bold"><i class="fas fa-calendar-alt text-primary me-2"></i> Input / Sesuaikan Forecast Sales 12 Bulan Manual</h6>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -704,6 +671,77 @@ function calcTotal12m() {
 
 document.addEventListener('DOMContentLoaded', () => {
     if (typeof Chart === 'undefined') return;
+    const evaluationChartLabels = <?= json_encode($evaluation_chart_labels) ?>;
+    const evaluationForecast = <?= json_encode($evaluation_chart_forecast) ?>;
+    const evaluationRealization = <?= json_encode($evaluation_chart_realization) ?>;
+    const comparisonChart = document.getElementById('forecastActualBarChart');
+    if (comparisonChart) {
+        new Chart(comparisonChart, {
+            type: 'bar',
+            data: {
+                labels: evaluationChartLabels,
+                datasets: [
+                    {
+                        label: 'Forecast',
+                        data: evaluationForecast,
+                        backgroundColor: 'rgba(22, 163, 74, 0.75)',
+                        borderColor: '#16a34a',
+                        borderWidth: 1,
+                        borderRadius: 4
+                    },
+                    {
+                        label: 'Realisasi',
+                        data: evaluationRealization,
+                        backgroundColor: 'rgba(37, 99, 235, 0.75)',
+                        borderColor: '#2563eb',
+                        borderWidth: 1,
+                        borderRadius: 4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom' } },
+                scales: { y: { beginAtZero: true } }
+            }
+        });
+    }
+    const trendChart = document.getElementById('forecastActualLineChart');
+    if (trendChart) {
+        new Chart(trendChart, {
+            type: 'line',
+            data: {
+                labels: evaluationChartLabels,
+                datasets: [
+                    {
+                        label: 'Forecast',
+                        data: evaluationForecast,
+                        borderColor: '#16a34a',
+                        backgroundColor: 'rgba(22, 163, 74, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.25,
+                        pointRadius: 3
+                    },
+                    {
+                        label: 'Realisasi',
+                        data: evaluationRealization,
+                        borderColor: '#2563eb',
+                        backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.25,
+                        pointRadius: 3
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom' } },
+                scales: { y: { beginAtZero: true } }
+            }
+        });
+    }
     const historyChart = document.getElementById('monthlySalesHistoryChart');
     if (historyChart) {
         new Chart(historyChart, {
@@ -727,45 +765,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-    ['salesForecastOverviewChart', 'salesForecastChart'].forEach((chartId) => {
-        const ctx = document.getElementById(chartId);
-        if (!ctx) return;
-        new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: <?= json_encode($monthLabels) ?>,
-                datasets: [
-                    {
-                        label: 'Aktual',
-                        data: <?= json_encode($monthly_actual_totals) ?>,
-                        borderColor: '#64748b',
-                        backgroundColor: 'transparent',
-                        borderWidth: 2,
-                        tension: 0.25,
-                        pointRadius: 2,
-                        fill: false
-                    },
-                    {
-                        label: 'Forecast',
-                        data: <?= json_encode($monthly_forecast_totals) ?>,
-                        borderColor: '#2563eb',
-                        backgroundColor: 'transparent',
-                        borderDash: [5, 4],
-                        borderWidth: 2,
-                        tension: 0.25,
-                        pointRadius: 2,
-                        fill: false
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { position: 'bottom' } },
-                scales: { y: { beginAtZero: true } }
-            }
-        });
-    });
 });
 </script>
 

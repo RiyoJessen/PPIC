@@ -14,17 +14,20 @@ class SalesForecastController extends Controller
         ?string $needsStartDate = null,
         ?int $needsProductId = null,
         ?string $historyStartDate = null,
-        ?int $historyProductId = null
+        ?int $historyProductId = null,
+        ?string $sourceFilter = null,
+        ?string $periodStart = null,
+        ?string $periodEnd = null,
+        ?string $search = null,
+        ?int $page = null
     ): array
     {
         $year = $year ?: (int) date('Y');
         $validateDateFilter = static function (?string $date): ?string {
-            if ($date === null) {
-                return null;
-            }
             $dateParts = [];
             if (
-                !preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $date, $dateParts)
+                $date === null
+                || !preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $date, $dateParts)
                 || !checkdate((int) $dateParts[2], (int) $dateParts[3], (int) $dateParts[1])
             ) {
                 return null;
@@ -33,8 +36,19 @@ class SalesForecastController extends Controller
         };
         $needsStartDate = $validateDateFilter($needsStartDate);
         $historyStartDate = $validateDateFilter($historyStartDate);
+        $periodStart = self::validateDateFilter($periodStart);
+        $periodEnd = self::validateDateFilter($periodEnd);
+        if ($periodStart !== null && $periodEnd !== null && $periodStart > $periodEnd) {
+            [$periodStart, $periodEnd] = [$periodEnd, $periodStart];
+        }
         $needsProductId = $needsProductId !== null && $needsProductId > 0 ? $needsProductId : null;
         $historyProductId = $historyProductId !== null && $historyProductId > 0 ? $historyProductId : null;
+        $selectedProductId = $selectedProductId !== null && $selectedProductId > 0 ? $selectedProductId : null;
+        $sourceFilter = in_array($sourceFilter, ['sales', 'forecast'], true) ? $sourceFilter : 'all';
+        $search = trim((string) $search);
+        $search = $search !== '' ? substr($search, 0, 100) : '';
+        $page = max(1, $page ?? 1);
+        $perPage = 10;
         $products = Database::select("SELECT * FROM products ORDER BY id ASC");
 
         $historyConditions = ["sh.status = 'fulfilled'"];
@@ -56,24 +70,6 @@ class SalesForecastController extends Controller
             ORDER BY sh.sale_date DESC, sh.id DESC
             LIMIT 50
         ", $historyParams);
-
-        $forecasts = Database::select("
-            SELECT sf.*, p.code as product_code, p.name as product_name, p.unit as product_unit
-            FROM sales_forecasts sf
-            JOIN products p ON p.id = sf.product_id
-            WHERE sf.forecast_year = :yr
-            ORDER BY sf.id DESC
-        ", ['yr' => $year]);
-
-        $mrpEvaluations = SalesForecastService::evaluateForecastToRawMaterials($year);
-
-        // Data grafik 12 bulan (Jan-Des): Total Forecast Tahun $year vs Riwayat Penjualan Aktual
-        $monthlyForecastTotals = array_fill(1, 12, 0.0);
-        foreach ($forecasts as $f) {
-            for ($m = 1; $m <= 12; $m++) {
-                $monthlyForecastTotals[$m] += (float) ($f['m' . $m] ?? 0);
-            }
-        }
 
         $monthlyActualTotals = array_fill(1, 12, 0.0);
         $actualRows = Database::select("
@@ -135,8 +131,203 @@ class SalesForecastController extends Controller
             WHERE status IN ('quotation', 'confirmed_so')
         ") ?? [];
 
-        $total12mForecast = array_sum($monthlyForecastTotals);
-        $shortageProductsCount = count(array_filter($mrpEvaluations, fn($e) => $e['rm_status'] === 'shortage' || !$e['has_formula']));
+        $combinedRows = [];
+        $salesConditions = ["(sh.doc_type IN ('quotation', 'sales_order') OR sh.status IN ('quotation', 'confirmed_so'))"];
+        $salesParams = [];
+        if ($periodStart !== null) {
+            $salesConditions[] = 'sh.sale_month >= :combined_period_start';
+            $salesParams['combined_period_start'] = $periodStart;
+        }
+        if ($periodEnd !== null) {
+            $salesConditions[] = 'sh.sale_month <= :combined_period_end';
+            $salesParams['combined_period_end'] = $periodEnd;
+        }
+        if ($selectedProductId !== null) {
+            $salesConditions[] = 'sh.product_id = :combined_product_id';
+            $salesParams['combined_product_id'] = $selectedProductId;
+        }
+        if ($sourceFilter !== 'forecast') {
+            $salesRows = Database::select("
+                SELECT sh.*, p.code as product_code, p.name as product_name, p.unit as product_unit
+                FROM sales_histories sh
+                JOIN products p ON p.id = sh.product_id
+                WHERE " . implode(' AND ', $salesConditions) . "
+                ORDER BY sh.sale_month DESC, sh.id DESC
+            ", $salesParams);
+            foreach ($salesRows as $row) {
+                $combinedRows[] = [
+                    'source' => 'sales',
+                    'id' => (int) $row['id'],
+                    'display_id' => $row['doc_number'],
+                    'product_id' => (int) $row['product_id'],
+                    'product_code' => $row['product_code'],
+                    'product_name' => $row['product_name'],
+                    'product_unit' => $row['product_unit'],
+                    'quantity' => (float) $row['quantity'],
+                    'period' => $row['sale_month'],
+                    'date' => $row['sale_date'],
+                    'customer_name' => $row['customer_name'],
+                    'doc_type' => $row['doc_type'],
+                    'status' => $row['status'],
+                    'total_amount' => (float) $row['total_amount'],
+                    'notes' => $row['notes'] ?? '',
+                ];
+            }
+        }
+
+        $allForecasts = Database::select("
+            SELECT sf.*, p.code as product_code, p.name as product_name, p.unit as product_unit
+            FROM sales_forecasts sf
+            JOIN products p ON p.id = sf.product_id
+            ORDER BY sf.forecast_year DESC, sf.id DESC
+        ");
+        $evaluationForecasts = [];
+        foreach ($allForecasts as $forecast) {
+            if ($selectedProductId !== null && (int) $forecast['product_id'] !== $selectedProductId) {
+                continue;
+            }
+            if ($periodStart !== null && (int) $forecast['forecast_year'] < (int) substr($periodStart, 0, 4)) {
+                continue;
+            }
+            if ($periodEnd !== null && (int) $forecast['forecast_year'] > (int) substr($periodEnd, 0, 4)) {
+                continue;
+            }
+            for ($month = 1; $month <= 12; $month++) {
+                $period = sprintf('%04d-%02d', (int) $forecast['forecast_year'], $month);
+                if (($periodStart !== null && $period < $periodStart) || ($periodEnd !== null && $period > $periodEnd)) {
+                    continue;
+                }
+                $forecastRow = [
+                    'forecast_id' => (int) $forecast['id'],
+                    'product_id' => (int) $forecast['product_id'],
+                    'product_code' => $forecast['product_code'],
+                    'product_name' => $forecast['product_name'],
+                    'product_unit' => $forecast['product_unit'],
+                    'period' => $period,
+                    'quantity' => (float) ($forecast['m' . $month] ?? 0),
+                    'method' => $forecast['method'],
+                    'notes' => $forecast['notes'] ?? '',
+                ];
+                $evaluationForecasts[] = $forecastRow;
+
+                if ($sourceFilter !== 'sales' && (
+                    $search === ''
+                    || stripos((string) $forecastRow['product_code'], $search) !== false
+                    || stripos((string) $forecastRow['product_name'], $search) !== false
+                    || stripos((string) $forecastRow['method'], $search) !== false
+                    || stripos((string) $forecastRow['notes'], $search) !== false
+                )) {
+                    $combinedRows[] = [
+                        'source' => 'forecast',
+                        'id' => $forecastRow['forecast_id'],
+                        'display_id' => 'FC-' . $forecastRow['forecast_id'] . '-' . $period,
+                        'product_id' => $forecastRow['product_id'],
+                        'product_code' => $forecastRow['product_code'],
+                        'product_name' => $forecastRow['product_name'],
+                        'product_unit' => $forecastRow['product_unit'],
+                        'quantity' => $forecastRow['quantity'],
+                        'period' => $period,
+                        'date' => null,
+                        'customer_name' => null,
+                        'doc_type' => null,
+                        'status' => 'forecast',
+                        'total_amount' => null,
+                        'method' => $forecastRow['method'],
+                        'notes' => $forecastRow['notes'],
+                    ];
+                }
+            }
+        }
+
+        if ($search !== '' && $sourceFilter !== 'forecast') {
+            $combinedRows = array_values(array_filter($combinedRows, static function (array $row) use ($search): bool {
+                return stripos((string) $row['display_id'], $search) !== false
+                    || stripos((string) $row['product_code'], $search) !== false
+                    || stripos((string) $row['product_name'], $search) !== false
+                    || stripos((string) ($row['customer_name'] ?? ''), $search) !== false
+                    || stripos((string) ($row['method'] ?? ''), $search) !== false
+                    || stripos((string) ($row['notes'] ?? ''), $search) !== false;
+            }));
+        }
+        usort($combinedRows, static function (array $left, array $right): int {
+            $periodOrder = strcmp($right['period'], $left['period']);
+            if ($periodOrder !== 0) {
+                return $periodOrder;
+            }
+            return strcmp($left['source'], $right['source']);
+        });
+        $combinedTotal = count($combinedRows);
+        $combinedLastPage = max(1, (int) ceil($combinedTotal / $perPage));
+        $page = min($page, $combinedLastPage);
+        $paginatedCombinedRows = array_slice($combinedRows, ($page - 1) * $perPage, $perPage);
+
+        $realizationConditions = ["sh.status IN ('confirmed_so', 'fulfilled')"];
+        $realizationParams = [];
+        if ($periodStart !== null) {
+            $realizationConditions[] = 'sh.sale_month >= :evaluation_period_start';
+            $realizationParams['evaluation_period_start'] = $periodStart;
+        }
+        if ($periodEnd !== null) {
+            $realizationConditions[] = 'sh.sale_month <= :evaluation_period_end';
+            $realizationParams['evaluation_period_end'] = $periodEnd;
+        }
+        if ($selectedProductId !== null) {
+            $realizationConditions[] = 'sh.product_id = :evaluation_product_id';
+            $realizationParams['evaluation_product_id'] = $selectedProductId;
+        }
+        $realizationRows = Database::select("
+            SELECT sh.product_id, sh.sale_month, SUM(sh.quantity) as quantity
+            FROM sales_histories sh
+            WHERE " . implode(' AND ', $realizationConditions) . "
+            GROUP BY sh.product_id, sh.sale_month
+        ", $realizationParams);
+        $realizationsByPeriod = [];
+        foreach ($realizationRows as $row) {
+            $realizationsByPeriod[(int) $row['product_id'] . '|' . $row['sale_month']] = (float) $row['quantity'];
+        }
+
+        $evaluationByPeriod = [];
+        foreach ($evaluationForecasts as $forecastRow) {
+            $key = $forecastRow['product_id'] . '|' . $forecastRow['period'];
+            if (!isset($evaluationByPeriod[$key])) {
+                $evaluationByPeriod[$key] = $forecastRow + [
+                    'forecast_quantity' => 0.0,
+                    'realization_quantity' => $realizationsByPeriod[$key] ?? 0.0,
+                ];
+            }
+            $evaluationByPeriod[$key]['forecast_quantity'] += $forecastRow['quantity'];
+        }
+        $evaluationRows = [];
+        foreach ($evaluationByPeriod as $row) {
+            if ($row['forecast_quantity'] <= 0 && $row['realization_quantity'] <= 0) {
+                continue;
+            }
+            $metrics = self::calculateEvaluationMetrics($row['forecast_quantity'], $row['realization_quantity']);
+            $evaluationRows[] = array_merge($row, $metrics);
+        }
+        usort($evaluationRows, static function (array $left, array $right): int {
+            $periodOrder = strcmp($right['period'], $left['period']);
+            return $periodOrder !== 0 ? $periodOrder : strcmp($left['product_name'], $right['product_name']);
+        });
+
+        $chartTotals = [];
+        $evaluationForecastTotal = 0.0;
+        $evaluationRealizationTotal = 0.0;
+        $errorTotal = 0.0;
+        foreach ($evaluationRows as $row) {
+            $evaluationForecastTotal += $row['forecast_quantity'];
+            $evaluationRealizationTotal += $row['realization_quantity'];
+            $errorTotal += $row['error_percentage'];
+            if (!isset($chartTotals[$row['period']])) {
+                $chartTotals[$row['period']] = ['forecast' => 0.0, 'realization' => 0.0];
+            }
+            $chartTotals[$row['period']]['forecast'] += $row['forecast_quantity'];
+            $chartTotals[$row['period']]['realization'] += $row['realization_quantity'];
+        }
+        ksort($chartTotals);
+        $evaluationDifferenceTotal = $evaluationForecastTotal - $evaluationRealizationTotal;
+        $averageError = count($evaluationRows) > 0 ? $errorTotal / count($evaluationRows) : 0.0;
+        $monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
 
         return [
             'year' => $year,
@@ -148,9 +339,6 @@ class SalesForecastController extends Controller
             'needs_product_id' => $needsProductId,
             'history_start_date' => $historyStartDate,
             'history_product_id' => $historyProductId,
-            'forecasts' => $forecasts,
-            'mrp_evaluations' => $mrpEvaluations,
-            'monthly_forecast_totals' => array_values(array_slice($monthlyForecastTotals, 1)),
             'monthly_actual_totals' => array_values(array_slice($monthlyActualTotals, 1)),
             'total_sales_records' => (int) ($salesSummary['total_sales_records'] ?? 0),
             'total_sales_qty' => (float) ($salesSummary['total_sales_qty'] ?? 0),
@@ -164,10 +352,69 @@ class SalesForecastController extends Controller
                 'product_types' => (int) ($needsSummary['product_types'] ?? 0),
                 'customers' => (int) ($needsSummary['customers'] ?? 0),
             ],
-            'total_12m_forecast' => $total12mForecast,
-            'shortage_products_count' => $shortageProductsCount,
             'open_quotation_so' => (int) ($salesSummary['open_quotation_so'] ?? 0),
+            'combined_rows' => $paginatedCombinedRows,
+            'combined_total' => $combinedTotal,
+            'combined_page' => $page,
+            'combined_last_page' => $combinedLastPage,
+            'source_filter' => $sourceFilter,
+            'period_start' => $periodStart,
+            'period_end' => $periodEnd,
+            'search' => $search,
+            'evaluation_rows' => $evaluationRows,
+            'evaluation_summary' => [
+                'forecast_total' => $evaluationForecastTotal,
+                'realization_total' => $evaluationRealizationTotal,
+                'difference_total' => $evaluationDifferenceTotal,
+                'average_error' => $averageError,
+                'accuracy' => max(0.0, 100.0 - $averageError),
+            ],
+            'evaluation_chart_labels' => array_map(
+                static fn(string $period): string => $monthNames[(int) substr($period, 5, 2) - 1] . ' ' . substr($period, 0, 4),
+                array_keys($chartTotals)
+            ),
+            'evaluation_chart_forecast' => array_values(array_map(
+                static fn(array $totals): float => $totals['forecast'],
+                $chartTotals
+            )),
+            'evaluation_chart_realization' => array_values(array_map(
+                static fn(array $totals): float => $totals['realization'],
+                $chartTotals
+            )),
         ];
+    }
+
+    public static function calculateEvaluationMetrics(float $forecast, float $realization): array
+    {
+        $difference = round($forecast - $realization, 2);
+        $denominator = max($forecast, $realization);
+        $errorPercentage = $denominator > 0 ? round(abs($difference) / $denominator * 100, 2) : 0.0;
+
+        if ($difference > 0) {
+            $evaluation = 'Overforecast';
+            $insight = 'Prediksi lebih tinggi daripada realisasi. Tinjau kembali pola tren dan asumsi musiman.';
+        } elseif ($difference < 0) {
+            $evaluation = 'Underforecast';
+            $insight = 'Realisasi melampaui prediksi. Tinjau kapasitas dan perbarui proyeksi periode berikutnya.';
+        } else {
+            $evaluation = 'Sesuai';
+            $insight = 'Prediksi sesuai dengan realisasi. Pertahankan pemantauan pola permintaan.';
+        }
+
+        return [
+            'difference' => $difference,
+            'error_percentage' => $errorPercentage,
+            'evaluation' => $evaluation,
+            'insight' => $insight,
+        ];
+    }
+
+    private static function validateDateFilter(?string $date): ?string
+    {
+        if ($date === null || !preg_match('/^(\d{4})-(\d{2})$/', $date, $parts)) {
+            return null;
+        }
+        return (int) $parts[2] >= 1 && (int) $parts[2] <= 12 ? $date : null;
     }
 
     public static function storeSalesHistory(array $post, int $userId): int
