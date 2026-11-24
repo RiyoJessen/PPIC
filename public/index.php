@@ -304,6 +304,12 @@ try {
     }
 
     // MASTER DATA
+    if ($uri === '/master/overview') {
+        $data = \App\Http\Controllers\MasterController::materialOverview();
+        echo view('master.overview', $data);
+        exit;
+    }
+
     if ($uri === '/master/materials') {
         $data = \App\Http\Controllers\MasterController::materials();
         echo view('master.materials', $data);

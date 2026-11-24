@@ -40,27 +40,27 @@ $currentRole = AccessControl::getCurrentRole();
         <?php endif; ?>
 
         <?php if (AccessControl::canAccessDivision(AccessControl::ROLE_RD)): ?>
-            <div class="sidebar-label">
-                <span class="sidebar-label-dot bg-secondary"></span>
-                Finish Good dan formula
-            </div>
-            <a href="/master/products" class="list-group-item list-group-item-action bg-transparent text-light <?= isActive('/master/products', $currentUri) ?>">
-                <i class="fas fa-cube sidebar-menu-icon"></i>
-                <span>Finish Good (Produk)</span>
-            </a>
-            <a href="/master/boms" class="list-group-item list-group-item-action bg-transparent text-light <?= isActive('/master/boms', $currentUri) ?>">
-                <i class="fas fa-flask sidebar-menu-icon"></i>
-                <span>Formula &amp; R&amp;D</span>
+            <a href="/master/overview" class="list-group-item list-group-item-action bg-transparent text-light <?= isActive('/master/overview', $currentUri) ?>">
+                <i class="fas fa-boxes-stacked sidebar-menu-icon"></i>
+                <span>Material</span>
             </a>
             <a href="/master/materials" class="list-group-item list-group-item-action bg-transparent text-light <?= isActive('/master/materials', $currentUri) ?>">
                 <i class="fas fa-layer-group sidebar-menu-icon"></i>
-                <span>Raw Material &amp; Saf...</span>
+                <span>Data Raw Material</span>
                 <?php
                 $sidebarUnread = \App\Services\NotificationService::getUnreadCount($currentRole);
                 ?>
                 <?php if ($sidebarUnread > 0): ?>
                     <span class="sidebar-badge"><?= $sidebarUnread > 99 ? '99+' : $sidebarUnread ?></span>
                 <?php endif; ?>
+            </a>
+            <a href="/master/products" class="list-group-item list-group-item-action bg-transparent text-light <?= isActive('/master/products', $currentUri) ?>">
+                <i class="fas fa-cube sidebar-menu-icon"></i>
+                <span>Data Finish Good</span>
+            </a>
+            <a href="/master/boms" class="list-group-item list-group-item-action bg-transparent text-light <?= isActive('/master/boms', $currentUri) ?>">
+                <i class="fas fa-flask sidebar-menu-icon"></i>
+                <span>Data Formula</span>
             </a>
         <?php endif; ?>
 

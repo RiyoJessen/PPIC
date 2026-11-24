@@ -30,6 +30,8 @@ Route::prefix('ai')->name('ai.')->group(function () {
 
 // Master Finish Good, Formula, dan Raw Material
 Route::prefix('master')->name('master.')->group(function () {
+    Route::get('/overview', [MasterController::class, 'materialOverview'])->name('overview');
+
     Route::get('/products', [MasterController::class, 'products'])->name('products.index');
     Route::post('/products/store', [MasterController::class, 'storeProduct'])->name('products.store');
     Route::get('/products/delete', [MasterController::class, 'deleteProduct'])->name('products.delete');

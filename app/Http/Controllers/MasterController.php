@@ -10,6 +10,15 @@ use App\Services\InventoryService;
 
 class MasterController extends Controller
 {
+    public static function materialOverview(): array
+    {
+        return [
+            'materials' => self::materials()['materials'],
+            'products' => self::products()['products'],
+            'boms' => self::boms()['boms'],
+        ];
+    }
+
     public static function materials(): array
     {
         $materials = InventoryService::getMaterialStockSummary();
@@ -476,7 +485,7 @@ class MasterController extends Controller
             SELECT b.*, p.name as product_name, p.code as product_code
             FROM boms b
             JOIN products p ON p.id = b.product_id
-            ORDER BY b.id ASC
+            ORDER BY p.name ASC, b.product_id ASC, b.id DESC
         ");
 
         foreach ($boms as &$b) {

@@ -44,6 +44,7 @@ class AccessControl
 
         // R&D (Evaluasi Formula BOM, Finish Good, Master & Stok Material)
         if (
+            $uri === '/master/overview' ||
             str_starts_with($uri, '/master/materials') ||
             str_starts_with($uri, '/master/products') ||
             str_starts_with($uri, '/master/boms')
