@@ -104,13 +104,6 @@ function runAiAnalysis(materialId, buttonEl) {
                 document.getElementById('modalAiNarrative').innerHTML = data.analysis.narrative.replace(/\n\n/g, '<br><br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
                 document.getElementById('modalAiSource').textContent = data.analysis.source;
 
-                // Set PR button
-                const prBtn = document.getElementById('modalCreatePrBtn');
-                if (prBtn) {
-                    prBtn.href = `/purchasing/pr/create-from-ai?material_id=${materialId}&qty=${data.analysis.final_recommended_qty}`;
-                    prBtn.style.display = data.analysis.final_recommended_qty > 0 ? 'inline-block' : 'none';
-                }
-
                 modal.show();
             } else {
                 alert('Gagal mengambil analisis AI: ' + (data.error || 'Terjadi kesalahan sistem.'));

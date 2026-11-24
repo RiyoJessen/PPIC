@@ -9,8 +9,8 @@ use App\Config\AppConfig;
 use App\Database\Database;
 use App\Services\GeminiService;
 use App\Services\InventoryService;
+use App\Services\MaterialPlanningService;
 use App\Services\PriceForecastService;
-use App\Services\ProcurementService;
 
 class AiForecastingController extends Controller
 {
@@ -44,7 +44,7 @@ class AiForecastingController extends Controller
         // Calculate recommendations for all materials based on selected lookback horizon
         $recommendations = [];
         foreach ($materials as $m) {
-            $rec = ProcurementService::calculateRecommendation((int) $m['id'], 30, $lookbackDays);
+            $rec = MaterialPlanningService::calculateRecommendation((int) $m['id'], 30, $lookbackDays);
             $recommendations[] = $rec;
         }
 
@@ -90,7 +90,7 @@ class AiForecastingController extends Controller
 
     public static function forecastPrice(int $materialId): array
     {
-        $rec = ProcurementService::calculateRecommendation($materialId, 30, 90);
+        $rec = MaterialPlanningService::calculateRecommendation($materialId, 30, 90);
         return PriceForecastService::forecastMaterialPrice($materialId, (float) ($rec['final_recommended_qty'] ?? 0), true);
     }
 
@@ -114,30 +114,4 @@ class AiForecastingController extends Controller
         );
     }
 
-    public static function createPrFromAi(int $materialId, float $qty, int $userId): int
-    {
-        $prId = ProcurementService::createPrFromRecommendation($materialId, $qty, $userId, 'Dibuat otomatis melalui AI Forecasting PPIC');
-        
-        $mat = \App\Database\Database::selectOne("SELECT name, unit FROM materials WHERE id = :id", ['id' => $materialId]);
-        $pr = \App\Database\Database::selectOne("SELECT pr_number, total_estimated_cost FROM purchase_requisitions WHERE id = :id", ['id' => $prId]);
-        $prNo = $pr['pr_number'] ?? "PR-{$prId}";
-        $matName = $mat['name'] ?? 'Bahan Baku';
-        $unit = $mat['unit'] ?? 'Kg';
-        $cost = number_format((float)($pr['total_estimated_cost'] ?? 0), 0, ',', '.');
-        $userName = $_SESSION['user_name'] ?? 'PPIC Officer';
-
-        \App\Services\NotificationService::record(
-            'PPIC',
-            'PR_AI',
-            "Rekomendasi AI: Terbit PR {$prNo}",
-            "AI Gemini mendeteksi kebutuhan bahan baku kritis dan PPIC ({$userName}) telah menerbitkan Purchase Requisition {$prNo} untuk {$matName} sebanyak " . number_format($qty, 0, ',', '.') . " {$unit} senilai Rp {$cost}. Menunggu proses pengadaan oleh Divisi Purchasing.",
-            "/purchasing/pr",
-            $userId,
-            $userName,
-            true,
-            'Purchasing'
-        );
-
-        return $prId;
-    }
 }

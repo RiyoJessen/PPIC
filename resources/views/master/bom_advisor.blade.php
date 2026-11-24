@@ -1,5 +1,5 @@
 <?php
-$pageTitle = 'AI Formulation Advisor — Asisten Formulasi R&D';
+$pageTitle = 'Evaluasi Formula & Kecocokan Stok — R&D';
 require dirname(__DIR__) . '/layouts/header.php';
 ?>
 
@@ -10,15 +10,15 @@ require dirname(__DIR__) . '/layouts/header.php';
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
         <div>
             <h3 class="fw-bold mb-1 text-dark">
-                <i class="fas fa-wand-magic-sparkles text-purple me-2" style="color: #9333ea;"></i> AI Formulation Advisor &amp; Substitusi Kimia
+                <i class="fas fa-wand-magic-sparkles text-purple me-2" style="color: #9333ea;"></i> Evaluasi Formula &amp; Kecocokan Stok
             </h3>
             <p class="text-muted small mb-0">
-                Asisten kecerdasan buatan Gemini untuk tim R&amp;D: Menganalisis ketersediaan stok fisik gudang, mendeteksi bahan habis, dan menghitung rekomendasi formula kimia alternatif secara stoikiometrik.
+                Membandingkan formula BOM tersimpan berdasarkan kecukupan stok dan estimasi biaya. Perubahan formula tetap memerlukan validasi R&amp;D dan QC.
             </p>
         </div>
         <div class="d-flex align-items-center gap-2">
             <span class="badge bg-purple-subtle text-purple border border-purple px-3 py-2 font-monospace" style="color: #9333ea; border-color: #d8b4fe !important;">
-                <i class="fas fa-brain me-1"></i> Powered by Google Gemini AI
+                <i class="fas fa-shield-halved me-1"></i> Formula Tersimpan &amp; Review R&amp;D
             </span>
         </div>
     </div>
@@ -41,7 +41,11 @@ require dirname(__DIR__) . '/layouts/header.php';
             <div class="col-md-4">
                 <label class="form-label small fw-bold text-muted mb-1">Status Ketersediaan Bahan Formula:</label>
                 <div>
-                    <?php if ($has_shortage): ?>
+                    <?php if (!$has_active_bom): ?>
+                        <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-3 py-2">
+                            <i class="fas fa-triangle-exclamation me-1"></i> Belum ada formula BOM aktif
+                        </span>
+                    <?php elseif ($has_shortage): ?>
                         <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-2">
                             <i class="fas fa-exclamation-triangle me-1"></i> <?= count($depleted_items) ?> Bahan Baku Kritis / Tidak Cukup
                         </span>
@@ -68,7 +72,7 @@ require dirname(__DIR__) . '/layouts/header.php';
             <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                 <div>
                     <h6 class="fw-bold mb-0 text-dark"><i class="fas fa-flask text-primary me-2"></i> Formula Standar Aktif</h6>
-                    <small class="text-muted">Versi: <strong><?= htmlspecialchars($bom['version'] ?? 'v1.0') ?></strong> &bull; Batch: <?= number_format((float)($bom['batch_size'] ?? $product['standard_batch_size']), 0, ',', '.') ?> <?= $product['unit'] ?></small>
+                    <small class="text-muted">Versi: <strong><?= htmlspecialchars($bom['version'] ?? '-') ?></strong> &bull; Batch: <?= number_format((float)($bom['batch_size'] ?? $product['standard_batch_size']), 0, ',', '.') ?> <?= $product['unit'] ?></small>
                 </div>
                 <span class="badge bg-light text-dark border">Standar DKJ</span>
             </div>
@@ -136,8 +140,8 @@ require dirname(__DIR__) . '/layouts/header.php';
                         <i class="fas fa-wand-magic-sparkles"></i>
                     </span>
                     <div>
-                        <h6 class="fw-bold mb-0 text-dark">Rekomendasi Formulasi &amp; Substitusi Kimia AI Gemini</h6>
-                        <small class="text-muted" style="font-size: 11px;"><?= $ai_analysis['source'] ?? 'AI Engine' ?></small>
+                        <h6 class="fw-bold mb-0 text-dark">Analisis Formula Tersimpan</h6>
+                        <small class="text-muted" style="font-size: 11px;"><?= htmlspecialchars($ai_analysis['source'] ?? 'Analisis Sistem') ?></small>
                     </div>
                 </div>
                 <div class="small text-secondary lh-base mt-3" style="white-space: pre-line;">
@@ -148,8 +152,14 @@ require dirname(__DIR__) . '/layouts/header.php';
 
         <!-- Options Tabs / Cards -->
         <h5 class="fw-bold text-dark mb-3">
-            <i class="fas fa-lightbulb text-warning me-2"></i> Pilihan Formulasi Kimia yang Disarankan:
+            <i class="fas fa-lightbulb text-warning me-2"></i> Formula Alternatif yang Tersimpan:
         </h5>
+
+        <?php if (empty($ai_analysis['options'])): ?>
+            <div class="alert alert-secondary small">
+                Belum ada formula alternatif tersimpan untuk dibandingkan. Sistem tidak membuat komposisi kimia baru; tim R&amp;D perlu memasukkan formula berdasarkan spesifikasi dan hasil validasi.
+            </div>
+        <?php endif; ?>
 
         <?php foreach ($ai_analysis['options'] as $idx => $opt): ?>
             <div class="card border-0 shadow-sm mb-4">
@@ -230,17 +240,11 @@ require dirname(__DIR__) . '/layouts/header.php';
                             <span class="text-muted">Estimasi Biaya Bahan / Batch:</span>
                             <strong class="text-dark font-monospace fs-6 ms-1">Rp <?= number_format((float)$opt['estimated_cost'], 0, ',', '.') ?></strong>
                         </div>
-                        <form action="/master/boms/apply-ai-formulation" method="POST" onsubmit="return confirm('Terapkan dan publikasikan formula alternatif ini ke sistem produksi resmi?')">
+                        <form action="/master/boms/apply-ai-formulation" method="POST" onsubmit="return confirm('Pastikan formula tersimpan ini sudah divalidasi R&D/QC sebelum diaktifkan. Lanjutkan?')">
                             <input type="hidden" name="product_id" value="<?= $product['id'] ?>">
-                            <input type="hidden" name="version" value="<?= htmlspecialchars($opt['version_code']) ?>">
-                            <input type="hidden" name="batch_size" value="<?= $bom['batch_size'] ?? $product['standard_batch_size'] ?>">
-                            <input type="hidden" name="unit" value="<?= htmlspecialchars($product['unit']) ?>">
-                            <input type="hidden" name="yield_pct" value="<?= $bom['yield_pct'] ?? 98.0 ?>">
-                            <input type="hidden" name="scrap_pct" value="<?= $bom['scrap_pct'] ?? 2.0 ?>">
-                            <input type="hidden" name="notes" value="Rekomendasi AI Gemini: <?= htmlspecialchars($opt['title']) ?>. <?= htmlspecialchars($opt['reaction_parameters']) ?>">
-                            <input type="hidden" name="items_json" value="<?= htmlspecialchars(json_encode($opt['items']), ENT_QUOTES, 'UTF-8') ?>">
+                            <input type="hidden" name="source_bom_id" value="<?= (int) $opt['bom_id'] ?>">
                             <button type="submit" class="btn btn-success btn-sm px-3 shadow-xs">
-                                <i class="fas fa-check-circle me-1"></i> Setujui &amp; Terapkan Formula Ini
+                                <i class="fas fa-check-circle me-1"></i> R&amp;D Validasi &amp; Aktifkan Versi <?= htmlspecialchars($opt['version_code']) ?>
                             </button>
                         </form>
                     </div>

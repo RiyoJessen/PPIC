@@ -81,9 +81,7 @@ switch ($command) {
             ['GET', '/master/boms', 'MasterController@boms', 'RD'],
             ['GET', '/master/boms/ai-advisor', 'MasterController@aiFormulationAdvisor', 'RD'],
             ['GET', '/master/materials', 'MasterController@materials', 'RD'],
-            ['GET', '/purchasing/pr', 'PurchasingController@prIndex', 'Purchasing'],
-            ['GET', '/master/suppliers', 'MasterController@suppliers', 'Purchasing'],
-            ['GET', '/purchasing/po', 'PurchasingController@poIndex', 'Purchasing'],
+            ['GET', '/master/suppliers', 'MasterController@suppliers', 'PPIC'],
             ['GET', '/settings', 'SettingsController@index', 'Super Admin'],
         ];
         foreach ($routes as $r) {

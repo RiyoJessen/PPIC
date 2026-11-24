@@ -22,22 +22,22 @@ class DashboardController extends Controller
         $depletingItems = [];
 
         foreach ($materials as &$m) {
-            $rec = \App\Services\ProcurementService::calculateRecommendation((int) $m['id']);
+            $rec = \App\Services\MaterialPlanningService::calculateRecommendation((int) $m['id']);
             $dailyUsage = (float) $rec['daily_usage'];
             $available = (float) $m['available_stock'];
             $leadTime = (int) $m['lead_time_days'];
 
             $daysOfSupply = ($dailyUsage > 0) ? round($available / $dailyUsage, 1) : 999.0;
             $depletionDate = date('d M Y', strtotime('+' . max(1, (int)round($daysOfSupply)) . ' days'));
-            $orderDaysLeft = max(0, (int)round($daysOfSupply) - $leadTime);
-            $latestOrderDate = date('d M Y', strtotime('+' . $orderDaysLeft . ' days'));
+            $reviewDaysLeft = max(0, (int)round($daysOfSupply) - $leadTime);
+            $latestReviewDate = date('d M Y', strtotime('+' . $reviewDaysLeft . ' days'));
 
             $m['daily_usage'] = $dailyUsage;
             $m['days_of_supply'] = $daysOfSupply;
             $m['depletion_date'] = $depletionDate;
-            $m['order_days_left'] = $orderDaysLeft;
-            $m['latest_order_date'] = $latestOrderDate;
-            $m['is_order_due_today'] = ($orderDaysLeft === 0);
+            $m['review_days_left'] = $reviewDaysLeft;
+            $m['latest_review_date'] = $latestReviewDate;
+            $m['is_review_due_today'] = ($reviewDaysLeft === 0);
 
             if ($daysOfSupply <= 30 || $m['stock_status'] === 'Kritis') {
                 $depleting30Count++;
@@ -60,7 +60,7 @@ class DashboardController extends Controller
 
         $earliestDepletionDate = !empty($depletingItems) ? $depletingItems[0]['depletion_date'] : null;
         $earliestDays = !empty($depletingItems) ? $depletingItems[0]['days_of_supply'] : null;
-        $ordersDueToday = count(array_filter($depletingItems, fn($i) => !empty($i['is_order_due_today'])));
+        $reviewsDueToday = count(array_filter($depletingItems, fn($i) => !empty($i['is_review_due_today'])));
 
         $finishGoodCount = (int) (Database::selectOne("SELECT COUNT(*) as total FROM products")['total'] ?? 0);
         $quotationSoCount = (int) (Database::selectOne("
@@ -68,15 +68,6 @@ class DashboardController extends Controller
             FROM sales_histories
             WHERE status IN ('quotation', 'confirmed_so')
         ")['total'] ?? 0);
-
-        $pendingPrs = Database::select("
-            SELECT pr.*, 
-                   (SELECT COUNT(*) FROM purchase_requisition_items WHERE pr_id = pr.id) as item_count
-            FROM purchase_requisitions pr
-            WHERE pr.status IN ('submitted', 'draft')
-            ORDER BY pr.id DESC
-            LIMIT 5
-        ");
 
         $recentAudits = Database::select("
             SELECT a.*, u.name as user_name, u.role as user_role
@@ -103,12 +94,11 @@ class DashboardController extends Controller
             'depleting_items' => $depletingItems,
             'earliest_depletion_date' => $earliestDepletionDate,
             'earliest_days' => $earliestDays,
-            'orders_due_today' => $ordersDueToday,
+            'reviews_due_today' => $reviewsDueToday,
             'finish_good_count' => $finishGoodCount,
             'quotation_so_count' => $quotationSoCount,
             'materials' => $materials,
             'kritis_items' => $kritisItems,
-            'pending_prs' => $pendingPrs,
             'recent_audits' => $recentAudits,
             'recent_ai_logs' => $recentAiLogs,
         ];

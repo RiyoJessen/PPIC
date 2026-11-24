@@ -43,7 +43,6 @@ try {
 if (isset($_GET['switch_role'])) {
     $role = htmlspecialchars($_GET['switch_role']);
     $role = match($role) {
-        'Purchasing' => 'Purchasing',
         'RD', 'R&D' => 'RD',
         default => 'PPIC'
     };
@@ -51,17 +50,14 @@ if (isset($_GET['switch_role'])) {
     $_SESSION['user_division'] = $role;
     $_SESSION['is_super_admin'] = ($role === 'PPIC');
     $_SESSION['user_role'] = match($role) {
-        'Purchasing' => 'Purchasing (Evaluasi Vendor & PO)',
         'RD' => 'R&D (Evaluasi Formula BOM)',
         default => 'PPIC (Super Admin)'
     };
     $_SESSION['user_name'] = match($role) {
-        'Purchasing' => 'Purchasing Officer',
         'RD' => 'R&D Specialist',
         default => 'PPIC Officer'
     };
     $_SESSION['user_id'] = match($role) {
-        'Purchasing' => 4,
         'RD' => 7,
         default => 2 // PPIC
     };
@@ -79,6 +75,13 @@ if (isset($_GET['switch_role'])) {
 }
 
 if (!isset($_SESSION['user_division'])) {
+    $_SESSION['user_division'] = 'PPIC';
+    $_SESSION['is_super_admin'] = true;
+    $_SESSION['user_id'] = 2;
+    $_SESSION['user_name'] = 'PPIC Officer';
+    $_SESSION['user_role'] = 'PPIC (Super Admin)';
+}
+if (!in_array($_SESSION['user_division'], ['PPIC', 'RD'], true)) {
     $_SESSION['user_division'] = 'PPIC';
     $_SESSION['is_super_admin'] = true;
     $_SESSION['user_id'] = 2;
@@ -259,74 +262,6 @@ try {
         exit;
     }
 
-    // PURCHASING & PR / PO
-    if ($uri === '/purchasing/pr') {
-        $data = \App\Http\Controllers\PurchasingController::prIndex();
-        echo view('purchasing.pr', $data);
-        exit;
-    }
-
-    if ($uri === '/purchasing/pr/create' && $method === 'POST') {
-        $prId = \App\Http\Controllers\PurchasingController::createPrManual($_POST, (int) $_SESSION['user_id']);
-        $_SESSION['flash_success'] = "Purchase Requisition manual berhasil diajukan dan menunggu approval Manager.";
-        header('Location: /purchasing/pr');
-        exit;
-    }
-
-    if ($uri === '/purchasing/pr/delete') {
-        $id = (int) ($_GET['id'] ?? 0);
-        \App\Http\Controllers\PurchasingController::deletePr($id, (int) $_SESSION['user_id']);
-        $_SESSION['flash_success'] = "Purchase Requisition berhasil dibatalkan dan dihapus.";
-        header('Location: /purchasing/pr');
-        exit;
-    }
-
-    if ($uri === '/purchasing/pr/create-from-ai') {
-        $matId = (int) ($_GET['material_id'] ?? 0);
-        $qty = (float) ($_GET['qty'] ?? 0);
-        $prId = \App\Http\Controllers\AiForecastingController::createPrFromAi($matId, $qty, (int) $_SESSION['user_id']);
-        $_SESSION['flash_success'] = "Purchase Requisition berhasil dibuat langsung dari Rekomendasi AI Gemini!";
-        header('Location: /purchasing/pr');
-        exit;
-    }
-
-    if ($uri === '/purchasing/pr/approve') {
-        $id = (int) ($_GET['id'] ?? 0);
-        \App\Http\Controllers\PurchasingController::approvePr($id, (int) $_SESSION['user_id']);
-        $_SESSION['flash_success'] = "Purchase Requisition berhasil disetujui (Approved). Siap diterbitkan PO.";
-        header('Location: /purchasing/pr');
-        exit;
-    }
-
-    if ($uri === '/purchasing/po') {
-        $data = \App\Http\Controllers\PurchasingController::poIndex();
-        echo view('purchasing.po', $data);
-        exit;
-    }
-
-    if ($uri === '/purchasing/po/generate') {
-        $prId = (int) ($_GET['pr_id'] ?? 0);
-        $poId = \App\Http\Controllers\PurchasingController::generatePo($prId, (int) $_SESSION['user_id']);
-        $_SESSION['flash_success'] = "Purchase Order resmi berhasil diterbitkan ke supplier rekanan.";
-        header("Location: /purchasing/po/show?id={$poId}");
-        exit;
-    }
-
-    if ($uri === '/purchasing/po/show') {
-        $id = (int) ($_GET['id'] ?? 0);
-        $data = \App\Http\Controllers\PurchasingController::poShow($id);
-        echo view('purchasing.po_show', $data);
-        exit;
-    }
-
-    if ($uri === '/purchasing/po/receive' && $method === 'POST') {
-        $poId = (int) $_POST['po_id'];
-        \App\Http\Controllers\PurchasingController::receivePo($poId, $_POST['items'] ?? [], (int) $_SESSION['user_id']);
-        $_SESSION['flash_success'] = "Penerimaan fisik barang berhasil dikonfirmasi! Stok fisik gudang telah bertambah.";
-        header("Location: /purchasing/po/show?id={$poId}");
-        exit;
-    }
-
     // AI FORECASTING
     if ($uri === '/ai/forecast') {
         $selectedMid = isset($_GET['material_id']) ? (int) $_GET['material_id'] : null;
@@ -410,6 +345,13 @@ try {
         exit;
     }
 
+    if ($uri === '/master/products/update-stock' && $method === 'POST') {
+        \App\Http\Controllers\MasterController::updateProductStock($_POST, (int) $_SESSION['user_id']);
+        $_SESSION['flash_success'] = "Stok Finish Good berhasil diperbarui.";
+        header('Location: /master/products');
+        exit;
+    }
+
     if ($uri === '/master/products/delete') {
         $id = (int) ($_GET['id'] ?? 0);
         \App\Http\Controllers\MasterController::deleteProduct($id, (int) $_SESSION['user_id']);
@@ -432,7 +374,7 @@ try {
 
     if ($uri === '/master/boms/apply-ai-formulation' && $method === 'POST') {
         \App\Http\Controllers\MasterController::applyAiFormulation($_POST, (int)$_SESSION['user_id']);
-        $_SESSION['flash_success'] = "Formula BOM alternatif dari AI Gemini berhasil disetujui & dipublikasikan ke sistem produksi!";
+        $_SESSION['flash_success'] = "Formula BOM tersimpan berhasil diaktifkan kembali setelah validasi R&D.";
         header('Location: /master/boms');
         exit;
     }

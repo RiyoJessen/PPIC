@@ -38,11 +38,27 @@ $pageTitle = 'Master Produk Jadi DKJ';
                             <span>Batch Standar:</span>
                             <strong class="text-dark font-monospace"><?= number_format($p['standard_batch_size'], 0, ',', '.') ?> <?= $p['unit'] ?></strong>
                         </div>
+                        <div class="d-flex justify-content-between mb-1">
+                            <span>Stok Finish Good:</span>
+                            <strong class="text-dark font-monospace"><?= number_format((float) $p['finished_good_stock'], 0, ',', '.') ?> <?= htmlspecialchars($p['unit']) ?></strong>
+                        </div>
                         <div class="d-flex justify-content-between">
                             <span>Formula BOM:</span>
-                            <span class="text-success fw-bold"><i class="fas fa-check-circle me-1"></i>Terhubung</span>
+                            <?php if ((int) $p['has_active_bom'] > 0): ?>
+                                <span class="text-success fw-bold"><i class="fas fa-check-circle me-1"></i>Terhubung</span>
+                            <?php else: ?>
+                                <span class="text-danger fw-bold"><i class="fas fa-triangle-exclamation me-1"></i>Belum ada</span>
+                            <?php endif; ?>
                         </div>
                     </div>
+                    <form action="/master/products/update-stock" method="POST" class="mt-3 pt-3 border-top">
+                        <input type="hidden" name="product_id" value="<?= (int) $p['id'] ?>">
+                        <label class="form-label small fw-semibold mb-1">Perbarui stok Finish Good (<?= htmlspecialchars($p['unit']) ?>)</label>
+                        <div class="input-group input-group-sm">
+                            <input type="number" name="quantity" class="form-control" min="0" step="0.01" value="<?= htmlspecialchars((string) $p['finished_good_stock']) ?>" required>
+                            <button type="submit" class="btn btn-outline-primary">Simpan</button>
+                        </div>
+                    </form>
                 </div>
                 <div class="card-footer bg-white border-top d-flex justify-content-between align-items-center py-2">
                     <a href="/master/boms" class="btn btn-link btn-sm text-decoration-none py-0">
@@ -91,6 +107,11 @@ $pageTitle = 'Master Produk Jadi DKJ';
                             <label class="form-label small fw-semibold">Std Batch</label>
                             <input type="number" step="0.01" name="standard_batch_size" class="form-control form-control-sm" value="5000" required>
                         </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Stok Awal Finish Good</label>
+                        <input type="number" step="0.01" min="0" name="initial_stock" class="form-control form-control-sm" value="0" required>
                     </div>
 
                     <div class="mb-3">

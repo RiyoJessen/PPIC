@@ -88,7 +88,6 @@
                                     <?php
                                     $divColor = match($n['division_source']) {
                                         'PPIC' => 'danger',
-                                        'Purchasing' => 'success',
                                         'Warehouse' => 'info',
                                         'QC' => 'primary',
                                         'RD' => 'warning',
@@ -96,7 +95,6 @@
                                     };
                                     $divIcon = match($n['division_source']) {
                                         'PPIC' => 'fas fa-calendar-check',
-                                        'Purchasing' => 'fas fa-shopping-cart',
                                         'Warehouse' => 'fas fa-warehouse',
                                         'QC' => 'fas fa-microscope',
                                         'RD' => 'fas fa-flask-vial',
@@ -167,12 +165,6 @@
                             <a class="dropdown-item <?= \App\Services\AccessControl::isSuperAdmin() ? 'active fw-bold' : '' ?>" href="?switch_role=PPIC">
                                 <i class="fas fa-shield-alt me-2" style="color: #2563eb;"></i>
                                 <strong>PPIC</strong>
-                            </a>
-                        </li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li>
-                            <a class="dropdown-item <?= \App\Services\AccessControl::getCurrentRole() === 'Purchasing' ? 'active fw-bold' : '' ?>" href="?switch_role=Purchasing">
-                                <i class="fas fa-shopping-cart me-2" style="color: #0d9488;"></i> <strong>Purchasing</strong> (Evaluasi Vendor, PR &amp; PO)
                             </a>
                         </li>
                         <li>

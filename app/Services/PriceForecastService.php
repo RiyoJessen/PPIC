@@ -221,7 +221,7 @@ class PriceForecastService
         $priceDiff = $forecastPrice - $currentPrice;
         $priceChangePct = $currentPrice > 0 ? round(($priceDiff / $currentPrice) * 100, 2) : 0.0;
 
-        // Klasifikasi tren & sinyal pengadaan
+        // Klasifikasi tren harga dan waktu tindak lanjut
         if ($priceChangePct >= 2.5) {
             $trendDirection = 'naik';
             $trendLabel = 'Naik Signifikan';
@@ -229,7 +229,7 @@ class PriceForecastService
             $signalCode = 'LOCK_NOW';
             $signalLabel = 'Lock Harga / Beli Sekarang';
             $signalBadge = 'danger';
-            $signalDetail = "Harga diproyeksikan naik +{$priceChangePct}% pada {$nextMonthLabel}. Disarankan segera kunci kontrak PO di harga bulan ini.";
+            $signalDetail = "Harga diproyeksikan naik +{$priceChangePct}% pada {$nextMonthLabel}. Pertimbangkan meninjau kebutuhan dan harga bulan ini.";
         } elseif ($priceChangePct >= 0.8) {
             $trendDirection = 'naik';
             $trendLabel = 'Naik Moderat';
@@ -237,7 +237,7 @@ class PriceForecastService
             $signalCode = 'BUY_EARLY';
             $signalLabel = 'Pertimbangkan Beli Lebih Awal';
             $signalBadge = 'warning';
-            $signalDetail = "Tren harga merangkak naik (+{$priceChangePct}%). Percepat pengajuan PR untuk kebutuhan produksi bulan depan.";
+            $signalDetail = "Tren harga merangkak naik (+{$priceChangePct}%). Pertimbangkan meninjau kebutuhan produksi bulan depan lebih awal.";
         } elseif ($priceChangePct <= -1.5) {
             $trendDirection = 'turun';
             $trendLabel = 'Turun / Melandai';
@@ -394,7 +394,7 @@ class PriceForecastService
         $highStr = number_format($pf['high_price'], 0, ',', '.');
 
         $prompt = <<<PROMPT
-Anda adalah analis pasar komoditas kimia & procurement advisor untuk PT DUNIA KIMIA JAYA GRESIK.
+Anda adalah asisten analisis harga bahan baku untuk PPIC PT DUNIA KIMIA JAYA GRESIK.
 Berikan analisis singkat (maksimal 2 paragraf ringkas) mengenai proyeksi harga pasar bahan baku bulan depan:
 
 - Bahan Baku: {$mat['name']} ({$mat['code']})
@@ -407,7 +407,7 @@ Berikan analisis singkat (maksimal 2 paragraf ringkas) mengenai proyeksi harga p
 
 Fokuskan pada:
 1. Faktor pemicu tren harga pasar kimia industri yang relevan (energi, kurs, suplai domestik/impor).
-2. Rekomendasi strategi negosiasi/waktu penerbitan PO bagi tim PPIC & Purchasing.
+2. Rekomendasi waktu meninjau kebutuhan dan harga bagi PPIC.
 Gunakan Bahasa Indonesia formal yang ringkas dan profesional.
 PROMPT;
 
@@ -480,7 +480,7 @@ PROMPT;
                 ? ' Jika kuantitas rekomendasi Q dibeli pada bulan ini (lock harga), perusahaan berpotensi menghemat anggaran sekitar **Rp ' . number_format($pf['budget_delta'], 0, ',', '.') . '**.'
                 : '';
             $narrative = "Berdasarkan regresi tren historis dan momentum pasar 6 bulan terakhir, harga pasar **{$name}** pada **{$nextMonth}** diproyeksikan naik **{$sign}%** dari Rp {$cur}/{$unit} menjadi **Rp {$fcast}/{$unit}** (rentang estimasi Rp {$low} – Rp {$high}/{$unit}). Tekanan kenaikan terutama dipengaruhi oleh {$drivers[0]}.\n\n"
-                . "Strategi Pengadaan: Tim PPIC & Purchasing disarankan segera melakukan negosiasi *price lock* atau menerbitkan PO lebih awal ke {$supplier} sebelum penyesuaian daftar harga bulan depan berlaku.{$deltaText}";
+                . "Rekomendasi PPIC: pertimbangkan meninjau waktu kebutuhan dan harga acuan dari {$supplier} sebelum perubahan harga bulan depan.{$deltaText}";
         } elseif ($pf['trend_direction'] === 'turun') {
             $pctStr = number_format($pct, 2, ',', '.');
             $saveWait = abs($pf['budget_delta']);
@@ -488,11 +488,11 @@ PROMPT;
                 ? ' Pembelian bertahap berpotensi menghemat sekitar **Rp ' . number_format($saveWait, 0, ',', '.') . '** pada porsi kebutuhan non-darurat.'
                 : '';
             $narrative = "Model proyeksi menunjukkan tren harga pasar **{$name}** pada **{$nextMonth}** berpotensi melandai **{$pctStr}%** dari Rp {$cur}/{$unit} menuju **Rp {$fcast}/{$unit}** (rentang Rp {$low} – Rp {$high}/{$unit}). Penurunan ini sejalan dengan {$drivers[0]}.\n\n"
-                . "Strategi Pengadaan: Hindari penumpukan stok berlebih di harga tinggi saat ini. Terbitkan PO secara bertahap sesuai kebutuhan mendesak produksi dan lakukan negosiasi ulang harga kontrak ke {$supplier}.{$waitText}";
+                . "Rekomendasi PPIC: hindari kebutuhan berlebih pada harga tinggi; gunakan proyeksi ini sebagai bahan pertimbangan waktu pemenuhan kebutuhan bersama {$supplier}.{$waitText}";
         } else {
             $pctStr = ($pct >= 0 ? '+' : '') . number_format($pct, 2, ',', '.');
             $narrative = "Harga pasar **{$name}** pada **{$nextMonth}** diproyeksikan bergerak **stabil** ({$pctStr}%) di kisaran **Rp {$fcast}/{$unit}** (rentang Rp {$low} – Rp {$high}/{$unit}, dibanding bulan ini Rp {$cur}/{$unit}). Kondisi ini didukung oleh {$drivers[0]}.\n\n"
-                . "Strategi Pengadaan: Tidak ada urgensi spekulasi harga. Lanjutkan pengadaan normal mengikuti jadwal Reorder Point (ROP) dan MOQ optimal dari {$supplier}.";
+                . "Rekomendasi PPIC: belum ada urgensi perubahan waktu pemenuhan. Pantau kebutuhan, ROP, MOQ, dan harga acuan {$supplier}.";
         }
 
         return [

@@ -10,7 +10,7 @@ class NotificationService
     /**
      * Rekam notifikasi baru ke database untuk target divisi tertentu (atau multiple divisi).
      *
-     * @param string $divisionSource Divisi pembuat/pengirim (PPIC, Purchasing, Warehouse, QC, RD)
+     * @param string $divisionSource Divisi pembuat/pengirim (PPIC, Warehouse, QC, RD)
      * @param string $type Tipe aktivitas/event
      * @param string $title Judul notifikasi
      * @param string $message Pesan notifikasi
@@ -18,7 +18,7 @@ class NotificationService
      * @param int|null $userId User ID pembuat
      * @param string|null $userName Nama user pembuat
      * @param bool $sendEmail Apakah mengirimkan email alert
-     * @param string|array $targetDivision Divisi penerima ('Purchasing', 'Warehouse', 'QC', 'PPIC', 'RD', atau array ['Warehouse','PPIC'], default: 'ALL')
+     * @param string|array $targetDivision Divisi penerima ('Warehouse', 'QC', 'PPIC', 'RD', atau array, default: 'ALL')
      */
     public static function record(
         string $divisionSource,

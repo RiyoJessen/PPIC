@@ -8,7 +8,7 @@ $pageTitle = 'Executive Dashboard PPIC';
     <div>
         <h3 class="fw-bold mb-1 text-dark">Dashboard PPIC &amp; AI Control</h3>
         <p class="text-muted small mb-0">
-            Monitoring terintegrasi stok bahan baku kimia, rencana produksi, dan pengadaan cerdas untuk <strong>PT Dunia Kimia Jaya Gresik</strong>.
+            Monitoring stok bahan baku, rencana produksi, dan rekomendasi AI untuk <strong>PT Dunia Kimia Jaya Gresik</strong>.
         </p>
     </div>
     <div class="d-flex flex-wrap gap-2">
@@ -20,13 +20,6 @@ $pageTitle = 'Executive Dashboard PPIC';
             <?php endif; ?>
             <a href="/ai/forecast" class="btn btn-dark btn-sm px-3 shadow-sm">
                 <i class="fas fa-wand-magic-sparkles me-1 text-warning"></i> AI Analisis Material &amp; Harga
-            </a>
-        <?php elseif (\App\Services\AccessControl::getCurrentRole() === \App\Services\AccessControl::ROLE_PURCHASING): ?>
-            <a href="/purchasing/pr" class="btn btn-success btn-sm px-3 shadow-sm">
-                <i class="fas fa-file-invoice-dollar me-1"></i> Rekomendasi PR &amp; Evaluasi Vendor
-            </a>
-            <a href="/purchasing/po" class="btn btn-teal btn-sm px-3 shadow-sm text-white" style="background-color: #0d9488;">
-                <i class="fas fa-truck-loading me-1"></i> Terbitkan Purchase Order (PO)
             </a>
         <?php elseif (\App\Services\AccessControl::getCurrentRole() === \App\Services\AccessControl::ROLE_RD): ?>
             <a href="/master/boms" class="btn btn-warning btn-sm px-3 shadow-sm text-dark">
@@ -126,17 +119,12 @@ $pageTitle = 'Executive Dashboard PPIC';
             </p>
             <div class="d-flex flex-wrap gap-3 align-items-center pt-2 border-top border-secondary-subtle">
                 <div class="small">
-                    <strong>Rekomendasi Beli (Q):</strong>
+                    <strong>Rekomendasi Jumlah Tambahan (Q):</strong>
                     <span class="badge bg-primary fs-6 ms-1"><?= number_format((float)$firstLog['recommended_qty'], 0, ',', '.') ?> <?= $firstLog['material_unit'] ?></span>
                 </div>
                 <div class="small">
                     <strong>Tingkat Risiko:</strong>
                     <span class="badge bg-danger ms-1"><?= $firstLog['risk_level'] ?></span>
-                </div>
-                <div class="ms-auto">
-                    <a href="/purchasing/pr/create-from-ai?material_id=<?= $firstLog['material_id'] ?>&qty=<?= $firstLog['recommended_qty'] ?>" class="btn btn-primary btn-sm px-3 shadow-sm">
-                        <i class="fas fa-cart-plus me-1"></i> Ajukan PR Otomatis
-                    </a>
                 </div>
             </div>
         </div>
@@ -176,7 +164,7 @@ $pageTitle = 'Executive Dashboard PPIC';
                             <th>Bahan Baku</th>
                             <th class="text-end">Tersedia</th>
                             <th class="text-center">Estimasi Habis (AI)</th>
-                            <th class="text-center">Batas Order (Lead Time)</th>
+                            <th class="text-center">Waktu Tindak Lanjut (Lead Time)</th>
                             <th class="text-center">Aksi</th>
                         </tr>
                     </thead>
@@ -205,13 +193,13 @@ $pageTitle = 'Executive Dashboard PPIC';
                                         <div class="small text-muted" style="font-size: 11px;"><?= $item['days_of_supply'] ?> hari lagi</div>
                                     </td>
                                     <td class="text-center">
-                                        <?php if (!empty($item['is_order_due_today'])): ?>
+                                        <?php if (!empty($item['is_review_due_today'])): ?>
                                             <span class="badge bg-danger rounded-pill px-2 py-1">
-                                                <i class="fas fa-exclamation-circle me-1"></i> Hari Ini! (<?= $item['latest_order_date'] ?>)
+                                                <i class="fas fa-exclamation-circle me-1"></i> Tinjau Hari Ini (<?= $item['latest_review_date'] ?>)
                                             </span>
                                         <?php else: ?>
                                             <span class="badge bg-light text-dark border rounded-pill">
-                                                <?= $item['latest_order_date'] ?> (<?= $item['order_days_left'] ?> hr lagi)
+                                                <?= $item['latest_review_date'] ?> (<?= $item['review_days_left'] ?> hr lagi)
                                             </span>
                                         <?php endif; ?>
                                         <div class="text-muted" style="font-size: 10px;">Lead: <?= $item['lead_time_days'] ?> hr</div>
@@ -220,9 +208,6 @@ $pageTitle = 'Executive Dashboard PPIC';
                                         <button class="btn btn-outline-dark btn-sm py-0 px-2" onclick="runAiAnalysis(<?= $item['id'] ?>, this)">
                                             <i class="fas fa-wand-magic-sparkles text-purple"></i> AI
                                         </button>
-                                        <a href="/purchasing/pr/create-from-ai?material_id=<?= $item['id'] ?>&qty=<?= max((float)$item['moq'], (float)$item['safety_stock'] - (float)$item['available_stock']) ?>" class="btn btn-primary btn-sm py-0 px-2 ms-1" title="Ajukan PR">
-                                            <i class="fas fa-plus"></i> PR
-                                        </a>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -253,7 +238,7 @@ $pageTitle = 'Executive Dashboard PPIC';
                         <span id="modalRiskBadge" class="badge ms-1"></span>
                     </div>
                     <div>
-                        <span class="text-muted small">Rekomendasi Pembelian (Q):</span>
+                        <span class="text-muted small">Rekomendasi Jumlah Tambahan (Q):</span>
                         <span id="modalRecommendedQty" class="fw-bold font-monospace text-primary ms-1"></span>
                     </div>
                 </div>
@@ -268,9 +253,6 @@ $pageTitle = 'Executive Dashboard PPIC';
             </div>
             <div class="modal-footer bg-light border-top">
                 <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Tutup</button>
-                <a href="#" id="modalCreatePrBtn" class="btn btn-primary btn-sm px-3 shadow-sm">
-                    <i class="fas fa-file-invoice-dollar me-1"></i> Buat PR Otomatis
-                </a>
             </div>
         </div>
     </div>

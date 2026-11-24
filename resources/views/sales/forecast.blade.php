@@ -294,7 +294,7 @@ $sectionSalesHistories = $activeSection === 'needs'
     <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
         <div>
             <span class="fw-bold"><i class="fas fa-cubes text-warning me-2"></i> Cek Formula BOM &amp; Ketersediaan Raw Material (Dari Forecast <?= (int)$year ?>)</span>
-            <div class="text-muted small" style="font-size: 11px;">Memecah kebutuhan bulanan Forecast Sales ke kebutuhan Raw Material berdasarkan Formula BOM aktif dan membandingkannya dengan stok tersedia.</div>
+            <div class="text-muted small" style="font-size: 11px;">Mengurangi Forecast Sales 12 bulan dengan stok Finish Good, lalu menghitung kebutuhan produksi bersih dan Raw Material berdasarkan formula BOM.</div>
         </div>
         <a href="/ai/forecast" class="btn btn-outline-primary btn-sm">
             <i class="fas fa-wand-magic-sparkles me-1"></i> Buka AI Analisis Material &amp; Harga &rarr;
@@ -313,7 +313,14 @@ $sectionSalesHistories = $activeSection === 'needs'
                         <div>
                             <strong class="text-dark"><?= htmlspecialchars($efc['product_name']) ?></strong>
                             <span class="badge bg-white text-muted border font-monospace ms-1"><?= htmlspecialchars($efc['product_code']) ?></span>
-                            <span class="small text-muted ms-2">Kebutuhan Bulanan: <strong class="text-dark font-monospace"><?= number_format((float)$ev['monthly_demand'], 0, ',', '.') ?> <?= htmlspecialchars($efc['product_unit']) ?></strong></span>
+                            <div class="small text-muted mt-1">
+                                Forecast 12 bulan: <strong class="text-dark font-monospace"><?= number_format((float) $ev['forecast_demand'], 0, ',', '.') ?></strong>
+                                &middot; Stok Finish Good: <strong class="text-dark font-monospace"><?= number_format((float) $ev['finished_good_stock'], 0, ',', '.') ?></strong>
+                                &middot; Produksi bersih: <strong class="text-primary font-monospace"><?= number_format((float) $ev['net_production'], 0, ',', '.') ?> <?= htmlspecialchars($efc['product_unit']) ?></strong>
+                                <?php if ((int) $ev['required_batches'] > 0): ?>
+                                    &middot; <?= (int) $ev['required_batches'] ?> batch
+                                <?php endif; ?>
+                            </div>
                         </div>
                         <div class="d-flex gap-2 align-items-center">
                             <?php if (!$ev['has_formula']): ?>
@@ -321,16 +328,40 @@ $sectionSalesHistories = $activeSection === 'needs'
                                 <a href="/master/boms" class="btn btn-warning btn-sm py-0 text-dark fw-semibold">
                                     <i class="fas fa-flask-vial me-1"></i> Buat Formula (R&amp;D) &rarr;
                                 </a>
+                            <?php elseif ($ev['rm_status'] === 'not_required'): ?>
+                                <span class="badge bg-success text-white"><i class="fas fa-box me-1"></i> Stok Finish Good Mencukupi</span>
                             <?php elseif ($ev['rm_status'] === 'available'): ?>
                                 <span class="badge bg-success text-white"><i class="fas fa-check-circle me-1"></i> Raw Material Tersedia</span>
                             <?php else: ?>
-                                <span class="badge bg-danger text-white"><i class="fas fa-exclamation-triangle me-1"></i> <?= (int)$ev['shortage_count'] ?> RM Kurang (AI Insight)</span>
-                                <a href="/master/boms/ai-advisor?product_id=<?= (int)$efc['product_id'] ?>" class="btn btn-sm py-0 text-white" style="background: #7c3aed;">
-                                    <i class="fas fa-wand-magic-sparkles me-1"></i> Formula Sesuai Stok (AI)
+                                <span class="badge bg-danger text-white"><i class="fas fa-exclamation-triangle me-1"></i> <?= (int)$ev['shortage_count'] ?> Raw Material Kurang</span>
+                            <?php endif; ?>
+                            <?php if ($ev['has_formula']): ?>
+                                <a href="/master/boms/ai-advisor?product_id=<?= (int) $efc['product_id'] ?>" class="btn btn-outline-primary btn-sm py-0">
+                                    <i class="fas fa-wand-magic-sparkles me-1"></i> Evaluasi Alternatif
+                                </a>
+                            <?php elseif (!empty($ev['alternative_boms'])): ?>
+                                <a href="/master/boms/ai-advisor?product_id=<?= (int) $efc['product_id'] ?>" class="btn btn-outline-primary btn-sm py-0">
+                                    <i class="fas fa-list-check me-1"></i> Tinjau Formula Tersimpan
                                 </a>
                             <?php endif; ?>
                         </div>
                     </div>
+
+                    <?php if (!empty($ev['alternative_boms'])): ?>
+                        <?php $recommendedAlternative = $ev['alternative_boms'][0]; ?>
+                        <div class="alert alert-info py-2 px-3 small mb-3">
+                            <strong><i class="fas fa-lightbulb me-1"></i> Rekomendasi formula alternatif tersimpan:</strong>
+                            <?= htmlspecialchars($recommendedAlternative['bom']['version']) ?>
+                            &mdash;
+                            <?php if ($recommendedAlternative['shortage_count'] === 0): ?>
+                                seluruh bahan formula tercukupi untuk rencana ini
+                            <?php else: ?>
+                                <?= (int) $recommendedAlternative['shortage_count'] ?> bahan masih defisit
+                            <?php endif; ?>
+                            (estimasi nilai kebutuhan bahan: Rp <?= number_format((float) $recommendedAlternative['estimated_replenishment_cost'], 0, ',', '.') ?>).
+                            <span class="text-muted">Periksa dan validasi formula alternatif bersama R&amp;D sebelum digunakan.</span>
+                        </div>
+                    <?php endif; ?>
 
                     <?php if ($ev['has_formula'] && !empty($ev['rm_requirements'])): ?>
                         <div class="table-responsive">
@@ -338,34 +369,28 @@ $sectionSalesHistories = $activeSection === 'needs'
                                 <thead class="table-light">
                                     <tr>
                                         <th>Raw Material</th>
-                                        <th class="text-end">Kebutuhan / Bln</th>
-                                        <th class="text-end">Stok Tersedia</th>
-                                        <th class="text-end">Kekurangan RM</th>
-                                        <th>Supplier &amp; Lead Time</th>
-                                        <th class="text-center">Tindak Lanjut</th>
+                                        <th class="text-end">Kebutuhan Rencana</th>
+                                        <th class="text-end">Stok Bebas</th>
+                                        <th class="text-end">Kekurangan</th>
+                                        <th class="text-end">Rekomendasi Jumlah Tambahan</th>
+                                        <th>Supplier &amp; Lead Time (Acuan)</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <?php foreach ($ev['rm_requirements'] as $rm): ?>
                                         <tr>
                                             <td class="fw-semibold text-dark"><?= htmlspecialchars($rm['material_name']) ?> <small class="text-muted font-monospace">(<?= htmlspecialchars($rm['material_code']) ?>)</small></td>
-                                            <td class="text-end font-monospace"><?= number_format((float)$rm['needed_monthly'], 1, ',', '.') ?> <?= htmlspecialchars($rm['unit']) ?></td>
+                                            <td class="text-end font-monospace"><?= number_format((float)$rm['needed_12m'], 1, ',', '.') ?> <?= htmlspecialchars($rm['unit']) ?></td>
                                             <td class="text-end font-monospace <?= $rm['shortage_qty'] > 0 ? 'text-danger fw-bold' : 'text-success fw-bold' ?>">
                                                 <?= number_format((float)$rm['available_stock'], 1, ',', '.') ?> <?= htmlspecialchars($rm['unit']) ?>
                                             </td>
                                             <td class="text-end font-monospace fw-bold <?= $rm['shortage_qty'] > 0 ? 'text-danger' : 'text-muted' ?>">
                                                 <?= $rm['shortage_qty'] > 0 ? '-' . number_format((float)$rm['shortage_qty'], 1, ',', '.') . ' ' . htmlspecialchars($rm['unit']) : '0' ?>
                                             </td>
-                                            <td class="text-muted"><?= htmlspecialchars($rm['supplier_name']) ?> (<?= (int)$rm['lead_time_days'] ?> hr)</td>
-                                            <td class="text-center">
-                                                <?php if ($rm['shortage_qty'] > 0): ?>
-                                                    <a href="/purchasing/pr/create-from-ai?material_id=<?= (int)$rm['material_id'] ?>&qty=<?= (float)$rm['recommended_buy_qty'] ?>" class="btn btn-primary btn-sm py-0 px-2">
-                                                        <i class="fas fa-cart-plus me-1"></i> Buat PR (<?= number_format((float)$rm['recommended_buy_qty'], 0, ',', '.') ?>)
-                                                    </a>
-                                                <?php else: ?>
-                                                    <span class="badge bg-success-subtle text-success border">Cukup</span>
-                                                <?php endif; ?>
+                                            <td class="text-end font-monospace fw-semibold">
+                                                <?= number_format((float)$rm['recommended_qty'], 1, ',', '.') ?> <?= htmlspecialchars($rm['unit']) ?>
                                             </td>
+                                            <td class="text-muted"><?= htmlspecialchars($rm['supplier_name']) ?> (<?= (int)$rm['lead_time_days'] ?> hr)</td>
                                         </tr>
                                     <?php endforeach; ?>
                                 </tbody>

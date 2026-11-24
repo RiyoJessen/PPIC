@@ -4,14 +4,13 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\SalesForecastController;
 use App\Http\Controllers\AiForecastingController;
-use App\Http\Controllers\PurchasingController;
 use App\Http\Controllers\MasterController;
 use App\Http\Controllers\SettingsController;
 
 Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 Route::get('/dashboard', [DashboardController::class, 'index']);
 
-// Tahap 1: Input Data Sales, Quotation/SO & Forecast Sales 12 Bulan
+// Input data Sales, Quotation/SO & Forecast Sales 12 Bulan
 Route::prefix('forecast-sales')->name('forecast-sales.')->group(function () {
     Route::get('/', [SalesForecastController::class, 'index'])->name('index');
     Route::post('/store-sales', [SalesForecastController::class, 'storeSalesHistory'])->name('store-sales');
@@ -29,7 +28,7 @@ Route::prefix('ai')->name('ai.')->group(function () {
     Route::post('/price-history/store', [AiForecastingController::class, 'storeMarketPrice'])->name('price-history.store');
 });
 
-// Tahap 2: Mengecek Finish Good, Formula Material (AI Buat Formula Baru & R&D Evaluasi Formula)
+// Master Finish Good, Formula, dan Raw Material
 Route::prefix('master')->name('master.')->group(function () {
     Route::get('/products', [MasterController::class, 'products'])->name('products.index');
     Route::post('/products/store', [MasterController::class, 'storeProduct'])->name('products.store');
@@ -51,21 +50,7 @@ Route::prefix('master')->name('master.')->group(function () {
     Route::get('/suppliers/delete', [MasterController::class, 'deleteSupplier'])->name('suppliers.delete');
 });
 
-// Tahap 4: Rekomendasi Purchase Requisition, Purchasing Evaluasi Vendor & Terbitkan PO
-Route::prefix('purchasing')->name('purchasing.')->group(function () {
-    Route::get('/pr', [PurchasingController::class, 'prIndex'])->name('pr.index');
-    Route::post('/pr/create', [PurchasingController::class, 'createPrManual'])->name('pr.create');
-    Route::get('/pr/create-from-ai', [AiForecastingController::class, 'createPrFromAi'])->name('pr.create-from-ai');
-    Route::get('/pr/approve', [PurchasingController::class, 'approvePr'])->name('pr.approve');
-    Route::get('/pr/delete', [PurchasingController::class, 'deletePr'])->name('pr.delete');
-
-    Route::get('/po', [PurchasingController::class, 'poIndex'])->name('po.index');
-    Route::get('/po/generate', [PurchasingController::class, 'generatePo'])->name('po.generate');
-    Route::get('/po/show', [PurchasingController::class, 'poShow'])->name('po.show');
-    Route::post('/po/receive', [PurchasingController::class, 'receivePo'])->name('po.receive');
-});
-
-// Tahap 5: Barang Diterima dan Update Stok
+// Pencatatan stok dan mutasi gudang
 Route::prefix('inventory')->name('inventory.')->group(function () {
     Route::get('/', [InventoryController::class, 'index'])->name('index');
     Route::post('/manual-receive', [InventoryController::class, 'manualReceiveStock'])->name('manual-receive');

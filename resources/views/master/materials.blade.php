@@ -69,9 +69,6 @@ $pageTitle = 'Master Data & Stok Bahan Baku (Raw Material)';
                             </td>
                             <td class="text-end font-monospace fw-bold <?= $m['stock_status'] === 'Kritis' ? 'text-danger' : ($m['stock_status'] === 'Waspada' ? 'text-warning-emphasis' : 'text-success') ?>">
                                 <?= number_format((float)$m['available_stock'], 0, ',', '.') ?> <small class="fw-normal text-muted"><?= htmlspecialchars($m['unit']) ?></small>
-                                <?php if ((float)$m['incoming_po_stock'] > 0): ?>
-                                    <div class="text-info fw-normal" style="font-size: 10px;">+<?= number_format((float)$m['incoming_po_stock'], 0, ',', '.') ?> PO</div>
-                                <?php endif; ?>
                             </td>
                             <td class="text-center">
                                 <span class="badge badge-<?= strtolower($m['stock_status']) ?> px-2 py-1 rounded-pill">

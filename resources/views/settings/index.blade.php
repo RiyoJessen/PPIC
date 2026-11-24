@@ -112,7 +112,7 @@ $pageTitle = 'Pengaturan Sistem & Ganti Data';
 
                     <div class="mb-2">
                         <label class="form-label small fw-semibold">Email Penerima Peringatan (Pisahkan koma)</label>
-                        <input type="text" name="mail_recipients" class="form-control form-control-sm" value="<?= htmlspecialchars($mail_config['recipients']) ?>" placeholder="purchasing@duniakimia.co.id, ppic@duniakimia.co.id" required>
+                        <input type="text" name="mail_recipients" class="form-control form-control-sm" value="<?= htmlspecialchars($mail_config['recipients']) ?>" placeholder="ppic@duniakimia.co.id" required>
                     </div>
 
                     <div class="mb-3">

@@ -108,21 +108,17 @@ $pageTitle = 'AI Forecasting & Analisis Google Gemini';
 
                 <div class="col-lg-4">
                     <div class="bg-white p-4 rounded-3 border shadow-sm text-center">
-                        <span class="text-muted small fw-semibold text-uppercase">Indikasi Kebutuhan Beli (Q)</span>
+                        <span class="text-muted small fw-semibold text-uppercase">Rekomendasi Jumlah Tambahan (Q)</span>
                         <h1 class="fw-bold text-primary my-2 font-monospace">
                             <?= number_format((float)$active_analysis['final_recommended_qty'], 0, ',', '.') ?>
                             <span class="fs-5 fw-normal text-muted"><?= $mat['unit'] ?></span>
                         </h1>
                         <p class="small text-muted mb-3">
-                            Estimasi Nilai Pengadaan:<br>
+                            Estimasi Nilai Kebutuhan Tambahan:<br>
                             <strong class="text-dark fs-6 font-monospace">Rp <?= number_format((float)$active_analysis['estimated_cost'], 0, ',', '.') ?></strong>
                         </p>
 
-                        <?php if ($active_analysis['final_recommended_qty'] > 0): ?>
-                            <a href="/purchasing/pr/create-from-ai?material_id=<?= $mat['id'] ?>&qty=<?= $active_analysis['final_recommended_qty'] ?>" class="btn btn-primary w-100 shadow-sm py-2">
-                                <i class="fas fa-cart-plus me-1"></i> Ajukan Purchase Requisition (PR)
-                            </a>
-                        <?php else: ?>
+                        <?php if ($active_analysis['final_recommended_qty'] <= 0): ?>
                             <button class="btn btn-outline-secondary w-100 py-2" disabled>
                                 <i class="fas fa-check-circle text-success me-1"></i> Stok Masih Mencukupi
                             </button>
@@ -240,7 +236,7 @@ $pageTitle = 'AI Forecasting & Analisis Google Gemini';
                                 <div class="fs-5 fw-bold font-monospace text-success mt-1">
                                     Rp <?= number_format((float)$ps['potential_early_savings'], 0, ',', '.') ?>
                                 </div>
-                                <small class="text-muted">Jika PO bahan naik dikunci bulan ini</small>
+                                <small class="text-muted">Potensi selisih biaya berdasarkan jumlah rekomendasi</small>
                             </div>
                             <span class="badge bg-success-subtle text-success p-2 rounded-3">
                                 <i class="fas fa-piggy-bank fs-5"></i>
@@ -459,9 +455,9 @@ $pageTitle = 'AI Forecasting & Analisis Google Gemini';
 <div class="card border-0 shadow-sm mb-4">
     <div class="card-header bg-white py-3 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
         <div>
-            <span class="fw-bold"><i class="fas fa-table-list me-2 text-primary"></i> Matriks Perhitungan Formula Pengadaan Bahan Baku</span>
+            <span class="fw-bold"><i class="fas fa-table-list me-2 text-primary"></i> Matriks Estimasi Kebutuhan Raw Material</span>
             <div class="text-muted small mt-1 font-monospace" style="font-size: 11px;">
-                Rumus: Q = max(0, Kebutuhan 30 Hari + Safety Stock &minus; Stok Tersedia &minus; PO Datang)
+                Rumus: Q = max(0, Kebutuhan 30 Hari + Safety Stock &minus; Stok Tersedia)
             </div>
         </div>
         <div>
@@ -476,7 +472,7 @@ $pageTitle = 'AI Forecasting & Analisis Google Gemini';
                     <th class="text-end">Laju Harian (Historis)</th>
                     <th class="text-end">Kebutuhan 30 Hari</th>
                     <th class="text-end">Stok Tersedia</th>
-                    <th class="text-end">Rekomendasi Q</th>
+                    <th class="text-end">Rekomendasi Jumlah Tambahan (Q)</th>
                     <th class="text-center">Status</th>
                     <th class="text-center">Aksi AI</th>
                 </tr>
@@ -510,11 +506,6 @@ $pageTitle = 'AI Forecasting & Analisis Google Gemini';
                                 <a href="/ai/forecast?material_id=<?= $m['id'] ?>" class="btn btn-outline-dark" title="Fokus Analisis Gemini">
                                     <i class="fas fa-wand-magic-sparkles text-purple"></i> Analisis
                                 </a>
-                                <?php if ($rec['final_recommended_qty'] > 0): ?>
-                                    <a href="/purchasing/pr/create-from-ai?material_id=<?= $m['id'] ?>&qty=<?= $rec['final_recommended_qty'] ?>" class="btn btn-primary" title="Buat PR">
-                                        <i class="fas fa-cart-plus"></i> PR
-                                    </a>
-                                <?php endif; ?>
                             </div>
                         </td>
                     </tr>
@@ -601,9 +592,8 @@ $pageTitle = 'AI Forecasting & Analisis Google Gemini';
                         <label class="form-label small fw-semibold">Sumber Data Harga</label>
                         <select name="source" class="form-select form-select-sm">
                             <option value="Penawaran Supplier / Quotation">Penawaran Supplier / Quotation</option>
-                            <option value="Harga PO Aktual">Harga PO Aktual</option>
                             <option value="Indeks Pasar Kimia (ICIS / Domestik)">Indeks Pasar Kimia (ICIS / Domestik)</option>
-                            <option value="Survei Pasar Purchasing">Survei Pasar Purchasing</option>
+                            <option value="Survei Pasar Internal">Survei Pasar Internal</option>
                         </select>
                     </div>
                     <div class="mb-3">

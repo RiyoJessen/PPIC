@@ -226,14 +226,16 @@ class SalesForecastService
     }
 
     /**
-     * Evaluasi keterkaitan Forecast Sales 12 Bulan -> Cek Formula BOM -> Cek Raw Material & AI Insight.
+     * Evaluasi kebutuhan produksi bersih, formula BOM, dan bahan baku untuk forecast 12 bulan.
      */
     public static function evaluateForecastToRawMaterials(int $year): array
     {
         $forecasts = Database::select("
-            SELECT sf.*, p.code as product_code, p.name as product_name, p.unit as product_unit, p.standard_batch_size
+            SELECT sf.*, p.code as product_code, p.name as product_name, p.unit as product_unit,
+                   p.standard_batch_size, COALESCE(psb.current_qty, 0) as finished_good_stock
             FROM sales_forecasts sf
             JOIN products p ON p.id = sf.product_id
+            LEFT JOIN product_stock_balances psb ON psb.product_id = p.id
             WHERE sf.forecast_year = :yr
             ORDER BY sf.id DESC
         ", ['yr' => $year]);
@@ -247,75 +249,131 @@ class SalesForecastService
         $results = [];
         foreach ($forecasts as $fc) {
             $pid = (int) $fc['product_id'];
-            $curMonthCol = 'm' . (int) date('n');
-            $monthlyDemand = max((float) ($fc[$curMonthCol] ?? 0), round(((float) $fc['total_12m_qty']) / 12, 2));
+            $forecastDemand = 0.0;
+            for ($month = 1; $month <= 12; $month++) {
+                $forecastDemand += max(0.0, (float) ($fc['m' . $month] ?? 0));
+            }
+            if ($forecastDemand <= 0) {
+                $forecastDemand = max(0.0, (float) ($fc['total_12m_qty'] ?? 0));
+            }
+            $finishedGoodStock = max(0.0, (float) $fc['finished_good_stock']);
+            $netProduction = max(0.0, $forecastDemand - $finishedGoodStock);
 
             $bom = Database::selectOne("
                 SELECT * FROM boms WHERE product_id = :pid AND is_active = 1 ORDER BY id DESC LIMIT 1
             ", ['pid' => $pid]);
 
-            if (!$bom) {
-                $results[] = [
-                    'forecast' => $fc,
-                    'monthly_demand' => $monthlyDemand,
-                    'has_formula' => false,
-                    'bom' => null,
-                    'rm_status' => 'no_formula',
-                    'rm_requirements' => [],
-                    'shortage_count' => 0,
-                ];
-                continue;
+            $allBoms = Database::select(
+                'SELECT * FROM boms WHERE product_id = :pid ORDER BY id DESC',
+                ['pid' => $pid]
+            );
+            $candidateEvaluations = [];
+            foreach ($allBoms as $candidateBom) {
+                $candidateEvaluations[] = self::evaluateBomForProduction($candidateBom, $netProduction, $fc, $stockById);
             }
 
-            $batchSize = max(1.0, (float) ($bom['batch_size'] ?: $fc['standard_batch_size'] ?: 1000));
-            $batchFactor = $monthlyDemand / $batchSize;
-            $scrapFactor = 1 + (max(0.0, (float) ($bom['scrap_pct'] ?? 0)) / 100.0);
-
-            $bomItems = Database::select("
-                SELECT bi.*, m.code as material_code, m.name as material_name, m.unit as material_unit,
-                       m.unit_cost, m.safety_stock, m.moq, m.lead_time_days
-                FROM bom_items bi
-                JOIN materials m ON m.id = bi.material_id
-                WHERE bi.bom_id = :bid
-            ", ['bid' => $bom['id']]);
-
-            $reqs = [];
-            $shortageCount = 0;
-            foreach ($bomItems as $bi) {
-                $mid = (int) $bi['material_id'];
-                $st = $stockById[$mid] ?? [];
-                $avail = (float) ($st['available_stock'] ?? 0);
-                $needed = round((float) $bi['quantity_per_batch'] * $batchFactor * $scrapFactor, 1);
-                $shortage = max(0.0, round($needed - $avail, 1));
-                if ($shortage > 0) $shortageCount++;
-
-                $buyQty = $shortage > 0 ? max($shortage + (float) ($bi['safety_stock'] ?? 0), (float) ($bi['moq'] ?? 0)) : 0.0;
-
-                $reqs[] = [
-                    'material_id' => $mid,
-                    'material_code' => $bi['material_code'],
-                    'material_name' => $bi['material_name'],
-                    'unit' => $bi['material_unit'] ?: $bi['unit'],
-                    'needed_monthly' => $needed,
-                    'available_stock' => $avail,
-                    'shortage_qty' => $shortage,
-                    'recommended_buy_qty' => round($buyQty, 0),
-                    'supplier_name' => $st['supplier_name'] ?? '-',
-                    'lead_time_days' => (int) ($st['supplier_lead_time'] ?? $bi['lead_time_days'] ?? 5),
-                ];
+            $activeEvaluation = null;
+            $alternativeBoms = [];
+            foreach ($candidateEvaluations as $candidate) {
+                if ($bom && (int) $candidate['bom']['id'] === (int) $bom['id']) {
+                    $activeEvaluation = $candidate;
+                } else {
+                    $alternativeBoms[] = $candidate;
+                }
             }
+            usort($alternativeBoms, static function (array $a, array $b): int {
+                return [$a['shortage_count'], -$a['covered_item_count'], $a['estimated_replenishment_cost']]
+                    <=> [$b['shortage_count'], -$b['covered_item_count'], $b['estimated_replenishment_cost']];
+            });
+
+            $hasFormula = $activeEvaluation !== null && !empty($activeEvaluation['rm_requirements']);
+            $shortageCount = $activeEvaluation['shortage_count'] ?? 0;
 
             $results[] = [
                 'forecast' => $fc,
-                'monthly_demand' => $monthlyDemand,
-                'has_formula' => true,
-                'bom' => $bom,
-                'rm_status' => ($shortageCount === 0 && !empty($reqs)) ? 'available' : 'shortage',
-                'rm_requirements' => $reqs,
+                'forecast_demand' => round($forecastDemand, 2),
+                'finished_good_stock' => $finishedGoodStock,
+                'net_production' => round($netProduction, 2),
+                'monthly_demand' => round($forecastDemand / 12, 2),
+                'required_batches' => $activeEvaluation['required_batches'] ?? 0,
+                'has_formula' => $hasFormula,
+                'bom' => $activeEvaluation['bom'] ?? null,
+                'rm_status' => !$hasFormula
+                    ? 'no_formula'
+                    : ($netProduction <= 0
+                        ? 'not_required'
+                        : ($shortageCount === 0 ? 'available' : 'shortage')),
+                'rm_requirements' => $activeEvaluation['rm_requirements'] ?? [],
                 'shortage_count' => $shortageCount,
+                'alternative_boms' => $alternativeBoms,
             ];
         }
 
         return $results;
+    }
+
+    private static function evaluateBomForProduction(array $bom, float $netProduction, array $forecast, array $stockById): array
+    {
+        $bomItems = Database::select("
+            SELECT bi.*, m.code as material_code, m.name as material_name, m.unit as material_unit,
+                   m.unit_cost, m.safety_stock, m.moq, m.order_multiple, m.lead_time_days
+            FROM bom_items bi
+            JOIN materials m ON m.id = bi.material_id
+            WHERE bi.bom_id = :bid
+        ", ['bid' => $bom['id']]);
+
+        $batchSize = max(1.0, (float) ($bom['batch_size'] ?: $forecast['standard_batch_size'] ?: 1000));
+        $requiredBatches = $netProduction > 0 ? (int) ceil($netProduction / $batchSize) : 0;
+        $scrapFactor = 1 + (max(0.0, (float) ($bom['scrap_pct'] ?? 0)) / 100.0);
+        $requirements = [];
+        $shortageCount = 0;
+        $coveredItemCount = 0;
+        $estimatedReplenishmentCost = 0.0;
+
+        foreach ($bomItems as $item) {
+            $materialId = (int) $item['material_id'];
+            $stock = $stockById[$materialId] ?? [];
+            $available = max(0.0, (float) ($stock['available_stock'] ?? 0));
+            $needed = round((float) $item['quantity_per_batch'] * $requiredBatches * $scrapFactor, 2);
+            $shortage = max(0.0, round($needed - $available, 2));
+            if ($shortage > 0) {
+                $shortageCount++;
+            } else {
+                $coveredItemCount++;
+            }
+
+            $safetyStock = max(0.0, (float) ($stock['safety_stock'] ?? $item['safety_stock'] ?? 0));
+            $moq = max(0.0, (float) ($stock['moq'] ?? $item['moq'] ?? 0));
+            $multiple = max(1.0, (float) ($stock['order_multiple'] ?? $item['order_multiple'] ?? 1));
+            $buyQty = 0.0;
+            if ($shortage > 0) {
+                $buyQty = max($shortage + $safetyStock, $moq);
+                $buyQty = ceil($buyQty / $multiple) * $multiple;
+            }
+            $unitCost = (float) ($stock['unit_cost'] ?? $item['unit_cost'] ?? 0);
+            $estimatedReplenishmentCost += $buyQty * $unitCost;
+
+            $requirements[] = [
+                'material_id' => $materialId,
+                'material_code' => $item['material_code'],
+                'material_name' => $item['material_name'],
+                'unit' => $item['material_unit'] ?: $item['unit'],
+                'needed_12m' => $needed,
+                'available_stock' => $available,
+                'shortage_qty' => $shortage,
+                'recommended_qty' => $buyQty,
+                'supplier_name' => $stock['supplier_name'] ?? '-',
+                'lead_time_days' => (int) ($stock['supplier_lead_time'] ?? $item['lead_time_days'] ?? 5),
+            ];
+        }
+
+        return [
+            'bom' => $bom,
+            'required_batches' => $requiredBatches,
+            'rm_requirements' => $requirements,
+            'shortage_count' => $shortageCount,
+            'covered_item_count' => $coveredItemCount,
+            'estimated_replenishment_cost' => $estimatedReplenishmentCost,
+        ];
     }
 }

@@ -25,7 +25,7 @@ class SettingsController extends Controller
             'encryption' => AppConfig::get('MAIL_ENCRYPTION', 'tls'),
             'from_address' => AppConfig::get('MAIL_FROM_ADDRESS', 'ppic@duniakimia.co.id'),
             'from_name' => AppConfig::get('MAIL_FROM_NAME', 'PPIC Alert'),
-            'recipients' => AppConfig::get('MAIL_ALERT_RECIPIENTS', 'purchasing@duniakimia.co.id,ppic@duniakimia.co.id'),
+            'recipients' => AppConfig::get('MAIL_ALERT_RECIPIENTS', 'ppic@duniakimia.co.id'),
         ];
 
         $emailLogs = Database::select("
@@ -37,8 +37,6 @@ class SettingsController extends Controller
             'products_count' => Database::selectOne("SELECT COUNT(*) as c FROM products")['c'] ?? 0,
             'boms_count' => Database::selectOne("SELECT COUNT(*) as c FROM boms")['c'] ?? 0,
             'batches_count' => Database::selectOne("SELECT COUNT(*) as c FROM inventory_batches")['c'] ?? 0,
-            'prs_count' => Database::selectOne("SELECT COUNT(*) as c FROM purchase_requisitions")['c'] ?? 0,
-            'pos_count' => Database::selectOne("SELECT COUNT(*) as c FROM purchase_orders")['c'] ?? 0,
             'email_count' => Database::selectOne("SELECT COUNT(*) as c FROM email_notification_logs")['c'] ?? 0,
         ];
 
@@ -59,7 +57,7 @@ class SettingsController extends Controller
         $user = trim($data['mail_username'] ?? '');
         $pass = trim($data['mail_password'] ?? '');
         $enc = trim($data['mail_encryption'] ?? 'tls');
-        $recipients = trim($data['mail_recipients'] ?? 'purchasing@duniakimia.co.id,ppic@duniakimia.co.id');
+        $recipients = trim($data['mail_recipients'] ?? 'ppic@duniakimia.co.id');
         $from = trim($data['mail_from'] ?? 'ppic@duniakimia.co.id');
 
         $envPath = dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . '.env';

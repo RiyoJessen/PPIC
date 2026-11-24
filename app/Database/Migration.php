@@ -92,6 +92,14 @@ class Migration
             is_active INTEGER DEFAULT 1
         );
 
+        CREATE TABLE IF NOT EXISTS product_stock_balances (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            product_id INTEGER NOT NULL UNIQUE,
+            current_qty REAL NOT NULL DEFAULT 0,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+        );
+
         CREATE TABLE IF NOT EXISTS boms (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             product_id INTEGER NOT NULL,
@@ -152,65 +160,6 @@ class Migration
             FOREIGN KEY (batch_id) REFERENCES inventory_batches(id)
         );
 
-        CREATE TABLE IF NOT EXISTS purchase_requisitions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            pr_number TEXT UNIQUE NOT NULL,
-            source TEXT DEFAULT 'manual',
-            status TEXT DEFAULT 'draft',
-            priority TEXT DEFAULT 'normal',
-            required_date DATE,
-            total_estimated_cost REAL DEFAULT 0,
-            notes TEXT,
-            requested_by INTEGER,
-            approved_by INTEGER,
-            approved_at DATETIME,
-            rejection_reason TEXT,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        );
-
-        CREATE TABLE IF NOT EXISTS purchase_requisition_items (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            pr_id INTEGER NOT NULL,
-            material_id INTEGER NOT NULL,
-            suggested_qty REAL NOT NULL,
-            approved_qty REAL,
-            unit TEXT NOT NULL,
-            estimated_unit_price REAL DEFAULT 0,
-            reason TEXT,
-            FOREIGN KEY (pr_id) REFERENCES purchase_requisitions(id) ON DELETE CASCADE,
-            FOREIGN KEY (material_id) REFERENCES materials(id)
-        );
-
-        CREATE TABLE IF NOT EXISTS purchase_orders (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            po_number TEXT UNIQUE NOT NULL,
-            pr_id INTEGER,
-            supplier_id INTEGER NOT NULL,
-            order_date DATE NOT NULL,
-            expected_arrival_date DATE NOT NULL,
-            status TEXT DEFAULT 'issued',
-            total_amount REAL DEFAULT 0,
-            payment_terms TEXT DEFAULT 'NET 30',
-            notes TEXT,
-            created_by INTEGER,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (pr_id) REFERENCES purchase_requisitions(id),
-            FOREIGN KEY (supplier_id) REFERENCES suppliers(id)
-        );
-
-        CREATE TABLE IF NOT EXISTS purchase_order_items (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            po_id INTEGER NOT NULL,
-            material_id INTEGER NOT NULL,
-            quantity_ordered REAL NOT NULL,
-            quantity_received REAL DEFAULT 0,
-            unit TEXT NOT NULL,
-            unit_price REAL DEFAULT 0,
-            subtotal REAL DEFAULT 0,
-            FOREIGN KEY (po_id) REFERENCES purchase_orders(id) ON DELETE CASCADE,
-            FOREIGN KEY (material_id) REFERENCES materials(id)
-        );
-
         CREATE TABLE IF NOT EXISTS ai_forecast_logs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             material_id INTEGER NOT NULL,
@@ -222,7 +171,6 @@ class Migration
             risk_level TEXT DEFAULT 'Aman',
             trend_direction TEXT DEFAULT 'stabil',
             ai_narrative TEXT,
-            is_applied_to_pr INTEGER DEFAULT 0,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (material_id) REFERENCES materials(id)
         );
@@ -319,6 +267,7 @@ class Migration
 SQL;
 
         Database::getConnection()->exec($schema);
+        self::removeLegacyPurchasingSchema();
     }
 
     private static function runMysql(): void
@@ -395,6 +344,14 @@ SQL;
             is_active TINYINT DEFAULT 1
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+        CREATE TABLE IF NOT EXISTS product_stock_balances (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            product_id INT NOT NULL UNIQUE,
+            current_qty DECIMAL(14,2) NOT NULL DEFAULT 0,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
         CREATE TABLE IF NOT EXISTS boms (
             id INT AUTO_INCREMENT PRIMARY KEY,
             product_id INT NOT NULL,
@@ -454,65 +411,6 @@ SQL;
             FOREIGN KEY (warehouse_id) REFERENCES warehouses(id) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-        CREATE TABLE IF NOT EXISTS purchase_requisitions (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            pr_number VARCHAR(100) UNIQUE NOT NULL,
-            source VARCHAR(50) DEFAULT 'manual',
-            status VARCHAR(50) DEFAULT 'draft',
-            priority VARCHAR(30) DEFAULT 'normal',
-            required_date DATE,
-            total_estimated_cost DECIMAL(14,2) DEFAULT 0,
-            notes TEXT,
-            requested_by INT NULL,
-            approved_by INT NULL,
-            approved_at DATETIME NULL,
-            rejection_reason TEXT,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-        CREATE TABLE IF NOT EXISTS purchase_requisition_items (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            pr_id INT NOT NULL,
-            material_id INT NOT NULL,
-            suggested_qty DECIMAL(12,2) NOT NULL,
-            approved_qty DECIMAL(12,2) NULL,
-            unit VARCHAR(30) NOT NULL,
-            estimated_unit_price DECIMAL(14,2) DEFAULT 0,
-            reason TEXT,
-            FOREIGN KEY (pr_id) REFERENCES purchase_requisitions(id) ON DELETE CASCADE,
-            FOREIGN KEY (material_id) REFERENCES materials(id) ON DELETE CASCADE
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-        CREATE TABLE IF NOT EXISTS purchase_orders (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            po_number VARCHAR(100) UNIQUE NOT NULL,
-            pr_id INT NULL,
-            supplier_id INT NOT NULL,
-            order_date DATE NOT NULL,
-            expected_arrival_date DATE NOT NULL,
-            status VARCHAR(50) DEFAULT 'issued',
-            total_amount DECIMAL(14,2) DEFAULT 0,
-            payment_terms VARCHAR(50) DEFAULT 'NET 30',
-            notes TEXT,
-            created_by INT NULL,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (pr_id) REFERENCES purchase_requisitions(id) ON DELETE SET NULL,
-            FOREIGN KEY (supplier_id) REFERENCES suppliers(id) ON DELETE CASCADE
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-        CREATE TABLE IF NOT EXISTS purchase_order_items (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            po_id INT NOT NULL,
-            material_id INT NOT NULL,
-            quantity_ordered DECIMAL(12,2) NOT NULL,
-            quantity_received DECIMAL(12,2) DEFAULT 0,
-            unit VARCHAR(30) NOT NULL,
-            unit_price DECIMAL(14,2) DEFAULT 0,
-            subtotal DECIMAL(14,2) DEFAULT 0,
-            FOREIGN KEY (po_id) REFERENCES purchase_orders(id) ON DELETE CASCADE,
-            FOREIGN KEY (material_id) REFERENCES materials(id) ON DELETE CASCADE
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
         CREATE TABLE IF NOT EXISTS ai_forecast_logs (
             id INT AUTO_INCREMENT PRIMARY KEY,
             material_id INT NOT NULL,
@@ -524,7 +422,6 @@ SQL;
             risk_level VARCHAR(30) DEFAULT 'Aman',
             trend_direction VARCHAR(30) DEFAULT 'stabil',
             ai_narrative TEXT,
-            is_applied_to_pr TINYINT DEFAULT 0,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (material_id) REFERENCES materials(id) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -629,5 +526,79 @@ SQL;
                 Database::getConnection()->exec($stmt);
             }
         }
+        self::removeLegacyPurchasingSchema();
     }
+
+    private static function removeLegacyPurchasingSchema(): void
+    {
+        $legacyTables = [
+            'purchase_order_items',
+            'purchase_orders',
+            'purchase_requisition_items',
+            'purchase_requisitions',
+        ];
+        if (AppConfig::getDbDriver() === 'mysql') {
+            $existingTables = Database::select("
+                SELECT TABLE_NAME AS name
+                FROM information_schema.TABLES
+                WHERE TABLE_SCHEMA = DATABASE()
+                  AND TABLE_NAME IN ('purchase_order_items', 'purchase_orders', 'purchase_requisition_items', 'purchase_requisitions')
+            ");
+        } else {
+            $existingTables = Database::select("
+                SELECT name
+                FROM sqlite_master
+                WHERE type = 'table'
+                  AND name IN ('purchase_order_items', 'purchase_orders', 'purchase_requisition_items', 'purchase_requisitions')
+            ");
+        }
+        $existingNames = array_fill_keys(array_column($existingTables, 'name'), true);
+        foreach ($legacyTables as $table) {
+            if (isset($existingNames[$table])) {
+                Database::statement("DROP TABLE IF EXISTS {$table}");
+            }
+        }
+
+        Database::statement("
+            DELETE FROM audit_logs
+            WHERE LOWER(module) = 'purchasing'
+               OR UPPER(action) IN ('CREATE_PR_AI', 'APPROVE_PR', 'ISSUE_PO', 'CREATE_PR_MANUAL', 'DELETE_PR')
+        ");
+        Database::statement("
+            DELETE FROM division_notifications
+            WHERE LOWER(division_source) = 'purchasing'
+               OR LOWER(target_division) = 'purchasing'
+               OR UPPER(type) IN ('PR_MANUAL', 'PR_APPROVED', 'PO_GENERATED', 'PO_RECEIVED')
+               OR LOWER(link) LIKE '%/purchasing%'
+        ");
+        Database::statement("
+            DELETE FROM stock_movements
+            WHERE UPPER(COALESCE(reference_type, '')) = 'PO'
+               OR UPPER(COALESCE(movement_type, '')) = 'IN_PURCHASE'
+               OR UPPER(COALESCE(reference_number, '')) LIKE 'PO-%'
+        ");
+
+        if (AppConfig::getDbDriver() === 'mysql') {
+            $column = Database::selectOne("
+                SELECT COUNT(*) as column_count
+                FROM information_schema.COLUMNS
+                WHERE TABLE_SCHEMA = DATABASE()
+                  AND TABLE_NAME = 'ai_forecast_logs'
+                  AND COLUMN_NAME = 'is_applied_to_pr'
+            ");
+            if ((int) ($column['column_count'] ?? 0) > 0) {
+                Database::statement('ALTER TABLE ai_forecast_logs DROP COLUMN is_applied_to_pr');
+            }
+            return;
+        }
+
+        $columns = Database::select('PRAGMA table_info(ai_forecast_logs)');
+        foreach ($columns as $column) {
+            if ($column['name'] === 'is_applied_to_pr') {
+                Database::statement('ALTER TABLE ai_forecast_logs DROP COLUMN is_applied_to_pr');
+                break;
+            }
+        }
+    }
+
 }

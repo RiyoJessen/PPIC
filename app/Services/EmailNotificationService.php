@@ -44,7 +44,7 @@ class EmailNotificationService
         $warning15To30 = [];
 
         foreach ($materials as $m) {
-            $rec = ProcurementService::calculateRecommendation((int) $m['id']);
+            $rec = MaterialPlanningService::calculateRecommendation((int) $m['id']);
             $dailyUsage = (float) $rec['daily_usage'];
             $available = (float) $m['available_stock'];
             $leadTime = (int) $m['lead_time_days'];
@@ -54,9 +54,9 @@ class EmailNotificationService
             $estimatedEmptyDate = date('Y-m-d', strtotime('+' . max(1, (int)round($daysOfSupply)) . ' days'));
             $depletionFormatted = date('d M Y', strtotime($estimatedEmptyDate));
 
-            // Hitung batas terakhir order sebelum terlambat (memperhitungkan lead time kirim supplier)
-            $orderDaysLeft = max(0, (int)round($daysOfSupply) - $leadTime);
-            $latestOrderDate = date('d M Y', strtotime('+' . $orderDaysLeft . ' days'));
+            // Hitung waktu tindak lanjut berdasarkan lead time acuan supplier.
+            $reviewDaysLeft = max(0, (int)round($daysOfSupply) - $leadTime);
+            $latestReviewDate = date('d M Y', strtotime('+' . $reviewDaysLeft . ' days'));
 
             // Kriteria: Stok habis kurang dari 15-30 hari ATAU status Kritis
             if ($daysOfSupply <= $maxDaysThreshold || $m['stock_status'] === 'Kritis') {
@@ -65,9 +65,9 @@ class EmailNotificationService
                 $m['days_of_supply'] = $daysOfSupply;
                 $m['estimated_empty_date'] = $estimatedEmptyDate;
                 $m['depletion_date_formatted'] = $depletionFormatted;
-                $m['order_days_left'] = $orderDaysLeft;
-                $m['latest_order_date'] = $latestOrderDate;
-                $m['is_order_due_today'] = ($orderDaysLeft === 0);
+                $m['review_days_left'] = $reviewDaysLeft;
+                $m['latest_review_date'] = $latestReviewDate;
+                $m['is_review_due_today'] = ($reviewDaysLeft === 0);
 
                 if ($daysOfSupply < 15 || $m['stock_status'] === 'Kritis') {
                     $m['alert_tier'] = 'Kritis (< 15 Hari)';
@@ -99,18 +99,18 @@ class EmailNotificationService
         $earliestItem = $alertItems[0];
         $earliestDate = $earliestItem['depletion_date_formatted'];
         $earliestDays = $earliestItem['days_of_supply'];
-        $ordersDueToday = count(array_filter($alertItems, fn($i) => $i['is_order_due_today']));
+        $reviewsDueToday = count(array_filter($alertItems, fn($i) => $i['is_review_due_today']));
 
         $recipients = $customRecipient ?: (string) AppConfig::get('MAIL_ALERT_RECIPIENTS', 'riyo.nurmalaya22@student.uisi.ac.id');
         
         // Subjek email dinamis sesuai tanggal aktual forecast AI
-        if ($ordersDueToday > 0) {
-            $subject = "⚠️ [AI FORECAST PPIC] {$ordersDueToday} Bahan Wajib Order Hari Ini (Stok Habis Mulai {$earliestDate}) — PT Dunia Kimia Jaya Gresik";
+        if ($reviewsDueToday > 0) {
+            $subject = "⚠️ [AI FORECAST PPIC] {$reviewsDueToday} Bahan Perlu Ditinjau Hari Ini (Stok Habis Mulai {$earliestDate}) — PT Dunia Kimia Jaya Gresik";
         } else {
             $subject = "⚠️ [AI FORECAST PPIC] Bahan Baku Habis Mulai {$earliestDate} ({$earliestDays} Hari Lagi) — PT Dunia Kimia Jaya Gresik";
         }
 
-        $html = self::buildHtmlEmail($criticalUnder15, $warning15To30, count($alertItems), $earliestItem, $ordersDueToday);
+        $html = self::buildHtmlEmail($criticalUnder15, $warning15To30, count($alertItems), $earliestItem, $reviewsDueToday);
 
         $host = (string) AppConfig::get('MAIL_HOST', 'smtp.gmail.com');
         $port = (int) AppConfig::get('MAIL_PORT', 587);
@@ -176,7 +176,7 @@ class EmailNotificationService
         array $warning15To30,
         int $totalCount,
         ?array $earliestItem = null,
-        int $ordersDueToday = 0
+        int $reviewsDueToday = 0
     ): string {
         $renderTableRows = function(array $items) {
             $rows = '';
@@ -191,16 +191,16 @@ class EmailNotificationService
                 $lead = (int) $item['lead_time_days'];
                 $days = $item['days_of_supply'];
                 $emptyDate = $item['depletion_date_formatted'] ?? date('d M Y', strtotime($item['estimated_empty_date']));
-                $latestOrderDate = $item['latest_order_date'] ?? date('d M Y');
-                $orderDaysLeft = $item['order_days_left'] ?? 0;
-                $isDueToday = !empty($item['is_order_due_today']);
+                $latestReviewDate = $item['latest_review_date'] ?? date('d M Y');
+                $reviewDaysLeft = $item['review_days_left'] ?? 0;
+                $isReviewDueToday = !empty($item['is_review_due_today']);
 
                 $badgeBg = ($days < 15) ? '#fee2e2' : '#fef3c7';
                 $badgeText = ($days < 15) ? '#991b1b' : '#92400e';
 
-                $orderBadgeBg = $isDueToday ? '#fecaca' : (($orderDaysLeft <= 2) ? '#fed7aa' : '#f1f5f9');
-                $orderBadgeText = $isDueToday ? '#991b1b' : (($orderDaysLeft <= 2) ? '#9a3412' : '#334155');
-                $orderLabel = $isDueToday ? "⚠️ HARI INI ({$latestOrderDate})" : "{$latestOrderDate} ({$orderDaysLeft} hr lagi)";
+                $reviewBadgeBg = $isReviewDueToday ? '#fecaca' : (($reviewDaysLeft <= 2) ? '#fed7aa' : '#f1f5f9');
+                $reviewBadgeText = $isReviewDueToday ? '#991b1b' : (($reviewDaysLeft <= 2) ? '#9a3412' : '#334155');
+                $reviewLabel = $isReviewDueToday ? "⚠️ HARI INI ({$latestReviewDate})" : "{$latestReviewDate} ({$reviewDaysLeft} hr lagi)";
 
                 $rows .= <<<ROW
                 <tr style="border-bottom: 1px solid #e2e8f0;">
@@ -219,8 +219,8 @@ class EmailNotificationService
                         <span style="font-size: 11px; font-weight: 600; color: {$badgeText};">Sisa {$days} Hari</span>
                     </td>
                     <td style="padding: 10px; text-align: center;">
-                        <span style="background-color: {$orderBadgeBg}; color: {$orderBadgeText}; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; font-family: monospace;">
-                            {$orderLabel}
+                        <span style="background-color: {$reviewBadgeBg}; color: {$reviewBadgeText}; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; font-family: monospace;">
+                            {$reviewLabel}
                         </span><br>
                         <span style="font-size: 10px; color: #64748b;">Lead Time: {$lead} hr</span>
                     </td>
@@ -244,15 +244,15 @@ ROW;
         $earliestDate = $earliestItem['depletion_date_formatted'] ?? (!empty($criticalUnder15[0]['depletion_date_formatted']) ? $criticalUnder15[0]['depletion_date_formatted'] : date('d M Y', strtotime('+4 days')));
         $earliestDays = $earliestItem['days_of_supply'] ?? (!empty($criticalUnder15[0]['days_of_supply']) ? $criticalUnder15[0]['days_of_supply'] : 3.4);
         $earliestItemName = $earliestItem['name'] ?? (!empty($criticalUnder15[0]['name']) ? $criticalUnder15[0]['name'] : 'Bahan Kimia Teknis');
-        $earliestOrderDate = $earliestItem['latest_order_date'] ?? date('d M Y');
+        $earliestReviewDate = $earliestItem['latest_review_date'] ?? date('d M Y');
 
-        $urgentOrderBox = ($ordersDueToday > 0) ? <<<BOX
+        $urgentReviewBox = ($reviewsDueToday > 0) ? <<<BOX
         <div style="background-color: #fef2f2; border: 1px solid #f87171; border-left: 5px solid #dc2626; border-radius: 6px; padding: 12px 16px; margin-bottom: 20px;">
             <div style="font-weight: bold; color: #991b1b; font-size: 14px; margin-bottom: 4px;">
-                🚨 TINDAKAN MENDESAK HARI INI: {$ordersDueToday} Bahan Baku Harus Diterbitkan PR / PO Sekarang!
+                🚨 TINJAU RENCANA KEBUTUHAN HARI INI: {$reviewsDueToday} Bahan Baku
             </div>
             <div style="font-size: 12px; color: #7f1d1d; line-height: 1.4;">
-                Bahan baku <strong>{$earliestItemName}</strong> dan bahan lainnya diproyeksikan habis mulai tanggal <strong>{$earliestDate} (sisa {$earliestDays} hari)</strong>. Mengingat lead time pengiriman supplier, pemesanan yang diterbitkan setelah hari ini akan menyebabkan pabrik kekurangan bahan baku (<em>stockout</em>).
+                Bahan baku <strong>{$earliestItemName}</strong> dan bahan lainnya diproyeksikan habis mulai tanggal <strong>{$earliestDate} (sisa {$earliestDays} hari)</strong>. Tinjau rekomendasi AI dan rencana produksi dengan mempertimbangkan lead time acuan.
             </div>
         </div>
 BOX : '';
@@ -268,7 +268,7 @@ BOX : '';
                         <th style="padding: 8px 10px;">Bahan Baku</th>
                         <th style="padding: 8px 10px; text-align: right;">Stok Bebas &amp; Laju</th>
                         <th style="padding: 8px 10px; text-align: center;">Estimasi Habis (AI)</th>
-                        <th style="padding: 8px 10px; text-align: center;">Batas Order Terakhir</th>
+                        <th style="padding: 8px 10px; text-align: center;">Waktu Tindak Lanjut</th>
                         <th style="padding: 8px 10px; text-align: right;">Rekomendasi (Q)</th>
                     </tr>
                 </thead>
@@ -290,7 +290,7 @@ SEC1 : '';
                         <th style="padding: 8px 10px;">Bahan Baku</th>
                         <th style="padding: 8px 10px; text-align: right;">Stok Bebas &amp; Laju</th>
                         <th style="padding: 8px 10px; text-align: center;">Estimasi Habis (AI)</th>
-                        <th style="padding: 8px 10px; text-align: center;">Batas Order Terakhir</th>
+                        <th style="padding: 8px 10px; text-align: center;">Waktu Tindak Lanjut</th>
                         <th style="padding: 8px 10px; text-align: right;">Rekomendasi (Q)</th>
                     </tr>
                 </thead>
@@ -316,7 +316,7 @@ SEC2 : '';
                         PT DUNIA KIMIA JAYA GRESIK &bull; PPIC &amp; AI PREDICTIVE CONTROL
                     </div>
                     <h2 style="margin: 0; font-size: 20px; font-weight: bold; color: #ffffff;">
-                        📊 EARLY WARNING: PROYEKSI TANGGAL STOK HABIS &amp; DEADLINE PEMESANAN
+                        📊 EARLY WARNING: PROYEKSI KETERSEDIAAN STOK
                     </h2>
                     <div style="font-size: 12px; color: #cbd5e1; margin-top: 6px;">
                         Model Forecast Tanggal: {$dateStr} &bull; Total Teridentifikasi: {$totalCount} Bahan Baku
@@ -335,8 +335,8 @@ SEC2 : '';
                                     <div style="font-size: 11px; color: #dc2626; font-weight: bold;">(Tersisa {$earliestDays} Hari Lagi)</div>
                                 </td>
                                 <td style="width: 33%; padding: 6px 12px; border-right: 1px solid #e2e8f0;">
-                                    <div style="font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: bold;">⚡ Batas Terbit PR / PO</div>
-                                    <div style="font-size: 16px; font-weight: bold; color: #c2410c; margin-top: 2px;">{$earliestOrderDate}</div>
+                                    <div style="font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: bold;">⚡ Waktu Tindak Lanjut</div>
+                                    <div style="font-size: 16px; font-weight: bold; color: #c2410c; margin-top: 2px;">{$earliestReviewDate}</div>
                                     <div style="font-size: 11px; color: #ea580c;">Bahan: {$earliestItemName}</div>
                                 </td>
                                 <td style="width: 33%; padding: 6px 12px;">
@@ -348,13 +348,13 @@ SEC2 : '';
                         </table>
                     </div>
 
-                    {$urgentOrderBox}
+                    {$urgentReviewBox}
 
                     <p style="font-size: 13px; line-height: 1.5; color: #334155; margin-top: 0;">
-                        Kepada Yth. <strong>Tim PPIC, Purchasing &amp; Manajemen Operasional PT Dunia Kimia Jaya Gresik</strong>,
+                        Kepada Yth. <strong>Tim PPIC PT Dunia Kimia Jaya Gresik</strong>,
                     </p>
                     <p style="font-size: 13px; line-height: 1.5; color: #334155;">
-                        Berdasarkan integrasi pemodelan laju konsumsi aktual dan jadwal produksi aktif, berikut adalah tabel proyeksi tanggal habis stok persediaan beserta batas waktu penerbitan <em>Purchase Order</em> agar proses manufaktur tidak mengalami hambatan:
+                        Berdasarkan pemodelan laju konsumsi aktual, berikut proyeksi ketersediaan stok dan waktu yang disarankan untuk meninjau kebutuhan produksi:
                     </p>
 
                     <!-- Sections -->
@@ -363,8 +363,8 @@ SEC2 : '';
 
                     <!-- Button Action -->
                     <div style="text-align: center; margin: 24px 0 16px 0;">
-                        <a href="{$appUrl}/purchasing/pr" style="display: inline-block; background-color: #2563eb; color: #ffffff; text-decoration: none; padding: 12px 28px; font-weight: bold; font-size: 14px; border-radius: 6px; box-shadow: 0 2px 4px rgba(37,99,235,0.3);">
-                            Buka PPIC &amp; Terbitkan Purchase Requisition (PR) &rarr;
+                        <a href="{$appUrl}/ai/forecast" style="display: inline-block; background-color: #2563eb; color: #ffffff; text-decoration: none; padding: 12px 28px; font-weight: bold; font-size: 14px; border-radius: 6px; box-shadow: 0 2px 4px rgba(37,99,235,0.3);">
+                            Buka Analisis AI &amp; Tinjau Rekomendasi &rarr;
                         </a>
                     </div>
                 </div>
@@ -372,7 +372,7 @@ SEC2 : '';
                 <!-- Footer -->
                 <div style="background-color: #f8fafc; padding: 16px 24px; border-top: 1px solid #e2e8f0; font-size: 11px; color: #64748b; text-align: center;">
                     Notifikasi Proyeksi Kebutuhan ini dihitung secara real-time oleh <strong>Sistem PPIC &bull; PT Dunia Kimia Jaya Gresik</strong>.<br>
-                    Rumus: Sisa Hari = Stok Bebas / Laju Konsumsi &bull; Batas Order = Tanggal Habis - Lead Time Supplier.
+                    Rumus: Sisa Hari = Stok Bebas / Laju Konsumsi &bull; Waktu Tindak Lanjut = Tanggal Habis - Lead Time Acuan.
                 </div>
             </div>
         </body>
@@ -399,7 +399,6 @@ HTML;
 
         $divBadgeColor = match($divisionSource) {
             'PPIC' => '#ef4444',
-            'Purchasing' => '#10b981',
             'Warehouse' => '#0ea5e9',
             'QC' => '#a855f7',
             'RD' => '#f59e0b',
@@ -433,8 +432,8 @@ HTML;
                     <small style="color: #94a3b8;">Sistem Koordinasi Terpadu &bull; PT Dunia Kimia Jaya Gresik</small>
                 </div>
                 <div class="body">
-                    <p style="margin-top: 0;">Halo Rekan Tim Terpadu (PPIC, Purchasing, Gudang, QC/QA, &amp; R&amp;D),</p>
-                    <p>Telah tercatat inputan operasional baru pada sistem yang memerlukan koordinasi antar-divisi:</p>
+                    <p style="margin-top: 0;">Halo Tim PPIC dan R&amp;D,</p>
+                    <p>Telah tercatat pembaruan data yang dapat menjadi bahan tinjauan rencana produksi dan analisis:</p>
                     <div class="alert-box">
                         <strong style="color: #0f172a; font-size: 15px;">Keterangan Aktivitas:</strong>
                         <p style="margin: 8px 0 10px 0; font-size: 14px; color: #334155;">{$message}</p>
@@ -446,7 +445,7 @@ HTML;
                         </small>
                     </div>
                     <p style="font-size: 13px; color: #475569; margin-bottom: 5px;">
-                        Tindak lanjut diperlukan sesuai alur kerja divisi Anda (misal: review PR, verifikasi alokasi stok gudang, penerbitan PO ke supplier, atau persiapan produksi).
+                        Tinjau informasi ini bersama rekomendasi AI dan data stok aktual sebelum memperbarui rencana produksi.
                     </p>
                     <a href="http://127.0.0.1:8000{$link}" class="btn">Buka Halaman Terkait di PPIC &rarr;</a>
                 </div>

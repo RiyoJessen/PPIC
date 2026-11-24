@@ -6,13 +6,12 @@ namespace App\Services;
 class AccessControl
 {
     public const ROLE_PPIC = 'PPIC';
-    public const ROLE_PURCHASING = 'Purchasing';
     public const ROLE_RD = 'RD';
 
     public static function getCurrentRole(): string
     {
         $role = $_SESSION['user_division'] ?? self::ROLE_PPIC;
-        return in_array($role, [self::ROLE_PPIC, self::ROLE_PURCHASING, self::ROLE_RD], true)
+        return in_array($role, [self::ROLE_PPIC, self::ROLE_RD], true)
             ? $role
             : self::ROLE_PPIC;
     }
@@ -38,9 +37,9 @@ class AccessControl
             return self::ROLE_PPIC;
         }
 
-        // Purchasing (PR, Evaluasi Vendor, PO, Supplier)
-        if (str_starts_with($uri, '/purchasing') || str_starts_with($uri, '/master/suppliers')) {
-            return self::ROLE_PURCHASING;
+        // Data supplier digunakan sebagai referensi analisis AI PPIC.
+        if (str_starts_with($uri, '/master/suppliers')) {
+            return self::ROLE_PPIC;
         }
 
         // R&D (Evaluasi Formula BOM, Finish Good, Master & Stok Material)
@@ -84,7 +83,6 @@ class AccessControl
     public static function getDefaultRouteForCurrentRole(): string
     {
         return match(self::getCurrentRole()) {
-            self::ROLE_PURCHASING => '/purchasing/pr',
             self::ROLE_RD => '/master/boms',
             default => '/'
         };
@@ -94,7 +92,6 @@ class AccessControl
     {
         return match($role) {
             self::ROLE_PPIC => 'PPIC (Forecast Sales 12 Bln & MRP)',
-            self::ROLE_PURCHASING => 'Divisi Purchasing (Evaluasi Vendor & PO)',
             self::ROLE_RD => 'Divisi R&D (Evaluasi Formula BOM & Material)',
             default => $role
         };

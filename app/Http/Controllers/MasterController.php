@@ -97,12 +97,12 @@ class MasterController extends Controller
             'RD',
             'MATERIAL_CREATED',
             "Master Bahan Baku Baru: {$data['name']}",
-            "Divisi R&D ({$userName}) mendaftarkan master bahan baku baru: {$data['name']} ({$data['code']}). Estimasi harga Rp " . number_format((float)$data['unit_cost'], 0, ',', '.') . "/{$data['unit']}. Siap dialokasikan pada formula dan PR pengadaan.",
+            "Divisi R&D ({$userName}) mendaftarkan master bahan baku baru: {$data['name']} ({$data['code']}). Estimasi harga Rp " . number_format((float)$data['unit_cost'], 0, ',', '.') . "/{$data['unit']}. Siap digunakan sebagai referensi perencanaan material.",
             "/master/materials",
             $userId,
             $userName,
             true,
-            ['PPIC', 'Purchasing']
+            'PPIC'
         );
 
         return $id;
@@ -228,26 +228,44 @@ class MasterController extends Controller
 
     public static function storeProduct(array $data, int $userId): int
     {
-        $id = Database::insert('products', [
-            'code' => trim($data['code']),
-            'name' => trim($data['name']),
-            'category' => trim($data['category'] ?? 'Koagulan Cair'),
-            'unit' => trim($data['unit'] ?? 'Kg'),
-            'standard_batch_size' => (float) ($data['standard_batch_size'] ?? 1000),
-            'description' => trim($data['description'] ?? ''),
-            'is_active' => 1,
-        ]);
+        $initialStock = $data['initial_stock'] ?? 0;
+        if (!is_numeric($initialStock) || !is_finite((float) $initialStock) || (float) $initialStock < 0) {
+            throw new \InvalidArgumentException('Stok awal Finish Good harus berupa angka nol atau lebih.');
+        }
 
-        Database::insert('audit_logs', [
-            'user_id' => $userId,
-            'action' => 'CREATE_PRODUCT',
-            'module' => 'Master Data',
-            'description' => "Menambahkan master produk jadi: {$data['name']} ({$data['code']}).",
-            'ip_address' => '127.0.0.1',
-            'created_at' => date('Y-m-d H:i:s'),
-        ]);
+        Database::beginTransaction();
+        try {
+            $id = Database::insert('products', [
+                'code' => trim($data['code']),
+                'name' => trim($data['name']),
+                'category' => trim($data['category'] ?? 'Koagulan Cair'),
+                'unit' => trim($data['unit'] ?? 'Kg'),
+                'standard_batch_size' => (float) ($data['standard_batch_size'] ?? 1000),
+                'description' => trim($data['description'] ?? ''),
+                'is_active' => 1,
+            ]);
 
-        return $id;
+            Database::insert('product_stock_balances', [
+                'product_id' => $id,
+                'current_qty' => (float) $initialStock,
+                'updated_at' => date('Y-m-d H:i:s'),
+            ]);
+
+            Database::insert('audit_logs', [
+                'user_id' => $userId,
+                'action' => 'CREATE_PRODUCT',
+                'module' => 'Master Data',
+                'description' => "Menambahkan master produk jadi: {$data['name']} ({$data['code']}).",
+                'ip_address' => '127.0.0.1',
+                'created_at' => date('Y-m-d H:i:s'),
+            ]);
+
+            Database::commit();
+            return $id;
+        } catch (\Throwable $e) {
+            Database::rollBack();
+            throw $e;
+        }
     }
 
     public static function storeSupplier(array $data, int $userId): int
@@ -272,12 +290,12 @@ class MasterController extends Controller
             'created_at' => date('Y-m-d H:i:s'),
         ]);
 
-        $userName = $_SESSION['user_name'] ?? 'Purchasing Officer';
+        $userName = $_SESSION['user_name'] ?? 'PPIC Officer';
         \App\Services\NotificationService::record(
-            'Purchasing',
+            'PPIC',
             'SUPPLIER_CREATED',
             "Supplier Rekanan Baru: {$data['name']}",
-            "Divisi Purchasing ({$userName}) mendaftarkan supplier rekanan baru: {$data['name']} ({$data['code']}) dengan Lead Time {$data['lead_time_days']} hari.",
+            "PPIC ({$userName}) menambahkan supplier sebagai referensi analisis: {$data['name']} ({$data['code']}) dengan Lead Time {$data['lead_time_days']} hari.",
             "/master/suppliers",
             $userId,
             $userName,
@@ -292,14 +310,47 @@ class MasterController extends Controller
     {
         Database::beginTransaction();
         try {
-            $productId = (int) $data['product_id'];
+            $productId = (int) ($data['product_id'] ?? 0);
             $version = trim($data['version'] ?? 'v1.0');
             $batchSize = (float) ($data['batch_size'] ?? 1000);
             $unit = trim($data['unit'] ?? 'Kg');
             $yieldPct = (float) ($data['yield_pct'] ?? 98.0);
             $scrapPct = (float) ($data['scrap_pct'] ?? 2.0);
             $notes = trim($data['notes'] ?? '');
+            $product = Database::selectOne('SELECT id FROM products WHERE id = :id', ['id' => $productId]);
+            if (!$product || $version === '' || !is_finite($batchSize) || $batchSize <= 0
+                || !is_finite($yieldPct) || $yieldPct <= 0 || $yieldPct > 100
+                || !is_finite($scrapPct) || $scrapPct < 0) {
+                throw new \InvalidArgumentException('Data produk, versi, ukuran batch, yield, atau scrap formula tidak valid.');
+            }
 
+            $rawItems = $data['items'] ?? [];
+            if (!is_array($rawItems) || empty($rawItems)) {
+                throw new \InvalidArgumentException('Formula harus memiliki minimal satu bahan baku.');
+            }
+            $validItems = [];
+            foreach ($rawItems as $item) {
+                if (!is_array($item)) {
+                    throw new \InvalidArgumentException('Format item formula tidak valid.');
+                }
+                $materialId = (int) ($item['material_id'] ?? 0);
+                $quantity = $item['quantity_per_batch'] ?? null;
+                if ($materialId <= 0 || !is_numeric($quantity) || !is_finite((float) $quantity) || (float) $quantity <= 0) {
+                    throw new \InvalidArgumentException('Setiap bahan formula harus memiliki material dan jumlah per batch yang valid.');
+                }
+                $material = Database::selectOne('SELECT id, unit FROM materials WHERE id = :id', ['id' => $materialId]);
+                if (!$material) {
+                    throw new \InvalidArgumentException('Formula berisi bahan baku yang tidak terdaftar.');
+                }
+                $validItems[] = [
+                    'material_id' => $materialId,
+                    'quantity_per_batch' => (float) $quantity,
+                    'unit' => $material['unit'],
+                    'notes' => trim((string) ($item['notes'] ?? '')),
+                ];
+            }
+
+            Database::update('boms', ['is_active' => 0], 'product_id = :product_id', ['product_id' => $productId]);
             $bomId = Database::insert('boms', [
                 'product_id' => $productId,
                 'version' => $version,
@@ -311,22 +362,14 @@ class MasterController extends Controller
                 'notes' => $notes,
             ]);
 
-            // Insert items
-            if (!empty($data['items']) && is_array($data['items'])) {
-                foreach ($data['items'] as $item) {
-                    $matId = (int) ($item['material_id'] ?? 0);
-                    $qty = (float) ($item['quantity_per_batch'] ?? 0);
-                    if ($matId > 0 && $qty > 0) {
-                        $mat = Database::selectOne("SELECT unit FROM materials WHERE id = :id", ['id' => $matId]);
-                        Database::insert('bom_items', [
-                            'bom_id' => $bomId,
-                            'material_id' => $matId,
-                            'quantity_per_batch' => $qty,
-                            'unit' => $mat['unit'] ?? 'Kg',
-                            'notes' => trim($item['notes'] ?? ''),
-                        ]);
-                    }
-                }
+            foreach ($validItems as $item) {
+                Database::insert('bom_items', [
+                    'bom_id' => $bomId,
+                    'material_id' => $item['material_id'],
+                    'quantity_per_batch' => $item['quantity_per_batch'],
+                    'unit' => $item['unit'],
+                    'notes' => $item['notes'],
+                ]);
             }
 
             Database::insert('audit_logs', [
@@ -366,12 +409,65 @@ class MasterController extends Controller
     {
         $products = Database::select("
             SELECT p.*,
-                   (SELECT COUNT(*) FROM boms WHERE product_id = p.id AND is_active = 1) as has_active_bom
+                   (SELECT COUNT(*) FROM boms WHERE product_id = p.id AND is_active = 1) as has_active_bom,
+                   COALESCE(psb.current_qty, 0) as finished_good_stock
             FROM products p
+            LEFT JOIN product_stock_balances psb ON psb.product_id = p.id
             ORDER BY p.id ASC
         ");
 
         return ['products' => $products];
+    }
+
+    public static function updateProductStock(array $data, int $userId): void
+    {
+        $productId = (int) ($data['product_id'] ?? 0);
+        $quantityValue = $data['quantity'] ?? null;
+        if ($productId <= 0 || !is_numeric($quantityValue) || !is_finite((float) $quantityValue) || (float) $quantityValue < 0) {
+            throw new \InvalidArgumentException('Produk dan stok Finish Good harus valid (stok tidak boleh negatif).');
+        }
+
+        Database::beginTransaction();
+        try {
+            $product = Database::selectOne('SELECT id, name, code, unit FROM products WHERE id = :id', ['id' => $productId]);
+            if (!$product) {
+                throw new \RuntimeException('Produk jadi tidak ditemukan.');
+            }
+
+            $existing = Database::selectOne(
+                'SELECT current_qty FROM product_stock_balances WHERE product_id = :product_id',
+                ['product_id' => $productId]
+            );
+            $oldQuantity = (float) ($existing['current_qty'] ?? 0);
+            $newQuantity = (float) $quantityValue;
+
+            if ($existing) {
+                Database::update('product_stock_balances', [
+                    'current_qty' => $newQuantity,
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ], 'product_id = :product_id', ['product_id' => $productId]);
+            } else {
+                Database::insert('product_stock_balances', [
+                    'product_id' => $productId,
+                    'current_qty' => $newQuantity,
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ]);
+            }
+
+            Database::insert('audit_logs', [
+                'user_id' => $userId,
+                'action' => 'UPDATE_FINISHED_GOOD_STOCK',
+                'module' => 'Master Produk Jadi',
+                'description' => "Memperbarui stok Finish Good {$product['name']} ({$product['code']}) dari {$oldQuantity} menjadi {$newQuantity} {$product['unit']}.",
+                'ip_address' => '127.0.0.1',
+                'created_at' => date('Y-m-d H:i:s'),
+            ]);
+
+            Database::commit();
+        } catch (\Throwable $e) {
+            Database::rollBack();
+            throw $e;
+        }
     }
 
     public static function boms(): array
@@ -406,8 +502,7 @@ class MasterController extends Controller
     {
         $suppliers = Database::select("
             SELECT s.*, 
-                   (SELECT COUNT(*) FROM materials WHERE preferred_supplier_id = s.id) as material_count,
-                   (SELECT COUNT(*) FROM purchase_orders WHERE supplier_id = s.id) as po_count
+                   (SELECT COUNT(*) FROM materials WHERE preferred_supplier_id = s.id) as material_count
             FROM suppliers s
             ORDER BY s.id ASC
         ");
@@ -505,11 +600,6 @@ class MasterController extends Controller
         $s = Database::selectOne("SELECT name, code FROM suppliers WHERE id = :id", ['id' => $id]);
         if (!$s) throw new \RuntimeException("Supplier tidak ditemukan.");
 
-        $poCount = Database::selectOne("SELECT COUNT(*) as count FROM purchase_orders WHERE supplier_id = :id", ['id' => $id]);
-        if (($poCount['count'] ?? 0) > 0) {
-            throw new \RuntimeException("Supplier '{$s['name']}' tidak dapat dihapus karena sudah memiliki transaksi Purchase Order.");
-        }
-
         Database::beginTransaction();
         try {
             Database::statement("UPDATE materials SET preferred_supplier_id = NULL WHERE preferred_supplier_id = :id", ['id' => $id]);
@@ -518,7 +608,7 @@ class MasterController extends Controller
             Database::insert('audit_logs', [
                 'user_id' => $userId,
                 'action' => 'DELETE_SUPPLIER',
-                'module' => 'Purchasing / Master',
+                'module' => 'PPIC / Master',
                 'description' => "Menghapus supplier rekanan: {$s['name']} ({$s['code']}).",
                 'ip_address' => '127.0.0.1',
                 'created_at' => date('Y-m-d H:i:s'),
@@ -539,13 +629,14 @@ class MasterController extends Controller
                 'selected_product_id' => 0,
                 'product' => ['id' => 0, 'name' => 'Belum Ada Produk Jadi', 'code' => '-', 'standard_batch_size' => 0, 'unit' => 'Kg'],
                 'bom' => null,
+                'has_active_bom' => false,
                 'standard_items' => [],
                 'standard_total_cost' => 0.0,
                 'depleted_items' => [],
                 'has_shortage' => false,
                 'ai_analysis' => [
                     'narrative' => 'Belum ada master produk jadi terdaftar. Silakan tambahkan Produk Jadi (Finish Good) terlebih dahulu.',
-                    'source' => 'AI Formulation Advisor',
+                    'source' => 'Rekomendasi formula tersimpan',
                     'options' => [],
                 ],
             ];
@@ -555,7 +646,7 @@ class MasterController extends Controller
             $productId = (int) $products[0]['id'];
         }
 
-        $recommendationData = \App\Services\GeminiService::recommendAlternativeFormulation($productId);
+        $recommendationData = \App\Services\BomRecommendationService::recommendForProduct($productId);
 
         return array_merge([
             'products' => $products,
@@ -567,50 +658,33 @@ class MasterController extends Controller
     {
         Database::beginTransaction();
         try {
-            $productId = (int) $data['product_id'];
-            $version = trim($data['version'] ?? 'v1.1-ALT');
-            $batchSize = (float) ($data['batch_size'] ?? 1000);
-            $unit = trim($data['unit'] ?? 'Kg');
-            $yieldPct = (float) ($data['yield_pct'] ?? 98.0);
-            $scrapPct = (float) ($data['scrap_pct'] ?? 2.0);
-            $notes = trim($data['notes'] ?? 'Formula alternatif hasil rekomendasi AI Gemini.');
-
-            $bomId = Database::insert('boms', [
-                'product_id' => $productId,
-                'version' => $version,
-                'batch_size' => $batchSize,
-                'unit' => $unit,
-                'yield_pct' => $yieldPct,
-                'scrap_pct' => $scrapPct,
-                'is_active' => 1,
-                'notes' => $notes,
-            ]);
-
-            // Decode items JSON
-            $items = json_decode($data['items_json'] ?? '[]', true) ?: [];
-            foreach ($items as $item) {
-                $matId = (int) ($item['material_id'] ?? 0);
-                $qty = (float) ($item['quantity_per_batch'] ?? 0);
-                if ($matId > 0 && $qty > 0) {
-                    $mat = Database::selectOne("SELECT unit FROM materials WHERE id = :id", ['id' => $matId]);
-                    Database::insert('bom_items', [
-                        'bom_id' => $bomId,
-                        'material_id' => $matId,
-                        'quantity_per_batch' => $qty,
-                        'unit' => $item['unit'] ?? ($mat['unit'] ?? 'Kg'),
-                        'notes' => trim($item['status_note'] ?? ($item['notes'] ?? '')),
-                    ]);
-                }
+            $productId = (int) ($data['product_id'] ?? 0);
+            $sourceBomId = (int) ($data['source_bom_id'] ?? 0);
+            $product = Database::selectOne('SELECT id, name, code FROM products WHERE id = :id', ['id' => $productId]);
+            $sourceBom = Database::selectOne(
+                'SELECT * FROM boms WHERE id = :id AND product_id = :product_id',
+                ['id' => $sourceBomId, 'product_id' => $productId]
+            );
+            if (!$product || !$sourceBom) {
+                throw new \InvalidArgumentException('Formula alternatif tersimpan tidak valid untuk produk ini.');
             }
 
-            $product = Database::selectOne("SELECT name, code FROM products WHERE id = :id", ['id' => $productId]);
-            $prodName = $product['name'] ?? "Produk #{$productId}";
+            $sourceItems = Database::select('SELECT * FROM bom_items WHERE bom_id = :bom_id', ['bom_id' => $sourceBomId]);
+            if (empty($sourceItems)) {
+                throw new \RuntimeException('Formula alternatif tidak memiliki komposisi bahan baku.');
+            }
+
+            Database::update('boms', ['is_active' => 0], 'product_id = :product_id', ['product_id' => $productId]);
+            Database::update('boms', ['is_active' => 1], 'id = :id', ['id' => $sourceBomId]);
+
+            $prodName = $product['name'];
+            $version = (string) $sourceBom['version'];
 
             Database::insert('audit_logs', [
                 'user_id' => $userId,
-                'action' => 'APPROVE_AI_BOM',
+                'action' => 'ACTIVATE_SAVED_BOM',
                 'module' => 'R&D / BOM',
-                'description' => "R&D menyetujui formula BOM alternatif AI {$version} untuk {$prodName}.",
+                'description' => "R&D mengaktifkan kembali salinan formula BOM tersimpan {$version} untuk {$prodName}.",
                 'ip_address' => '127.0.0.1',
                 'created_at' => date('Y-m-d H:i:s'),
             ]);
@@ -621,8 +695,8 @@ class MasterController extends Controller
             \App\Services\NotificationService::record(
                 'RD',
                 'BOM_AI_APPROVED',
-                "Formula BOM Alternatif Baru Disetujui: {$version}",
-                "Tim R&D ({$userName}) telah memvalidasi dan menyetujui formula BOM alternatif {$version} untuk {$prodName} sebagai solusi bahan baku menipis. PPIC dapat langsung menjadwalkannya di MPS.",
+                "Formula BOM Diaktifkan: {$version}",
+                "Tim R&D ({$userName}) mengaktifkan formula BOM tersimpan {$version} untuk {$prodName}. Pastikan validasi R&D/QC telah dilakukan sebelum produksi.",
                 "/master/boms",
                 $userId,
                 $userName,
@@ -630,7 +704,7 @@ class MasterController extends Controller
                 'PPIC'
             );
 
-            return $bomId;
+            return $sourceBomId;
         } catch (\Throwable $e) {
             Database::rollBack();
             throw $e;
