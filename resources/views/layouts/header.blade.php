@@ -26,7 +26,7 @@
     <!-- Page Content -->
     <div id="page-content-wrapper">
         <!-- Top Navbar -->
-        <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom px-4 py-2 sticky-top shadow-sm" style="min-height: 92px;">
+        <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom px-4 sticky-top shadow-sm" style="height: 92px;">
             <div class="d-flex align-items-center">
                 <button class="btn btn-outline-secondary me-3 px-3 py-2" id="menu-toggle" title="Tampilkan / Sembunyikan Sidebar">
                     <i class="fas fa-bars fs-5"></i>
