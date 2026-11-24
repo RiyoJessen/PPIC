@@ -26,13 +26,13 @@
     <!-- Page Content -->
     <div id="page-content-wrapper">
         <!-- Top Navbar -->
-        <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom px-4 py-2 sticky-top shadow-sm">
+        <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom px-4 py-2 sticky-top shadow-sm" style="min-height: 92px;">
             <div class="d-flex align-items-center">
-                <button class="btn btn-outline-secondary btn-sm me-3" id="menu-toggle" title="Tampilkan / Sembunyikan Sidebar">
-                    <i class="fas fa-bars"></i>
+                <button class="btn btn-outline-secondary me-3 px-3 py-2" id="menu-toggle" title="Tampilkan / Sembunyikan Sidebar">
+                    <i class="fas fa-bars fs-5"></i>
                 </button>
-                
-                <div class="text-muted small d-none d-md-block">
+
+                <div class="text-muted fs-6 d-none d-md-block">
                     <i class="fas fa-calendar-day me-1 text-secondary"></i> <?= date('l, d F Y') ?>
                 </div>
             </div>
@@ -40,7 +40,7 @@
             <div class="ms-auto d-flex align-items-center gap-3">
                 <!-- System Status Badge -->
                 <?php if (\App\Services\AccessControl::isSuperAdmin()): ?>
-                    <a href="/settings" class="badge rounded-pill bg-primary-subtle text-primary border border-primary-subtle text-decoration-none px-3 py-2" title="Pengaturan Sistem & Data">
+                    <a href="/settings" class="badge fs-6 rounded-pill bg-primary-subtle text-primary border border-primary-subtle text-decoration-none px-3 py-2" title="Pengaturan Sistem & Data">
                         <i class="fas fa-sliders-h me-1"></i> Pengaturan Sistem
                     </a>
                 <?php endif; ?>
@@ -52,8 +52,8 @@
                 $recentNotifs = \App\Services\NotificationService::getRecent($currentRole, 8);
                 ?>
                 <div class="dropdown" id="notifDropdownContainer">
-                    <button class="btn btn-light btn-sm border position-relative px-3 py-2 d-flex align-items-center" type="button" data-bs-toggle="dropdown" aria-expanded="false" id="notifBellButton" title="Notifikasi Tugas Khusus Divisi <?= htmlspecialchars($currentRole) ?>">
-                        <i class="fas fa-bell text-secondary fs-6"></i>
+                    <button class="btn btn-light border position-relative px-3 py-2 d-flex align-items-center" type="button" data-bs-toggle="dropdown" aria-expanded="false" id="notifBellButton" title="Notifikasi Tugas Khusus Divisi <?= htmlspecialchars($currentRole) ?>">
+                        <i class="fas fa-bell text-secondary fs-5"></i>
                         <?php if ($unreadCount > 0): ?>
                             <span id="notifBadgeCounter" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-white" style="font-size: 10px;">
                                 <?= $unreadCount > 99 ? '99+' : $unreadCount ?>
@@ -150,16 +150,16 @@
 
                 <!-- User Profile / Role -->
                 <div class="dropdown">
-                    <button class="btn btn-light btn-sm dropdown-toggle d-flex align-items-center gap-2 border px-3 py-1 shadow-xs" type="button" data-bs-toggle="dropdown">
+                    <button class="btn btn-light dropdown-toggle d-flex align-items-center gap-2 border px-3 py-2 shadow-xs" type="button" data-bs-toggle="dropdown">
                         <div class="avatar-circle">
                             <?php if (\App\Services\AccessControl::isSuperAdmin()): ?>
-                                <i class="fas fa-user-shield fs-5" style="color: #2563eb;" title="Super Admin"></i>
+                                <i class="fas fa-user-shield fs-4" style="color: #2563eb;" title="Super Admin"></i>
                             <?php else: ?>
-                                <i class="fas fa-user-circle text-primary fs-5"></i>
+                                <i class="fas fa-user-circle text-primary fs-4"></i>
                             <?php endif; ?>
                         </div>
                         <div class="text-start d-none d-sm-block">
-                            <div class="fw-semibold lh-1 small"><?= htmlspecialchars($_SESSION['user_name'] ?? 'User') ?></div>
+                            <div class="fw-semibold lh-1 fs-6"><?= htmlspecialchars($_SESSION['user_name'] ?? 'User') ?></div>
                         </div>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end shadow">

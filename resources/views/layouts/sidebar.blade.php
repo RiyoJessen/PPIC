@@ -15,9 +15,9 @@ $currentRole = AccessControl::getCurrentRole();
 <div class="sidebar border-end bg-dark text-white" id="sidebar-wrapper">
     <!-- Brand Logo & Role Badge -->
     <div class="sidebar-heading px-4 py-3 border-bottom border-secondary">
-        <div class="d-flex align-items-center gap-3 mb-2">
-            <img src="/images/dkj.png" alt="Logo PT Dunia Kimia Jaya" class="flex-shrink-0 rounded bg-white" style="width: 90px; height: 50px; object-fit: contain;">
-            <div class="fw-bold tracking-tight text-white fs-6 lh-1">PPIC</div>
+        <div class="d-flex align-items-center justify-content-center mb-2">
+            <img src="/images/dkj.png" alt="Logo PT Dunia Kimia Jaya" class="flex-shrink-0 rounded bg-white" style="width: 85px; height: 50px; object-fit: contain; transform: scale(1.25); transform-origin: center center;">
+
         </div>
 
         <!-- Role Access Indicator -->

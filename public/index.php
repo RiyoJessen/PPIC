@@ -67,7 +67,7 @@ if (isset($_GET['switch_role'])) {
     };
 
     if ($_SESSION['is_super_admin']) {
-        $_SESSION['flash_success'] = "🛡️ Mode Super Admin Aktif: Anda login sebagai PPIC (Akses Penuh ke Seluruh Alur Flowchart).";
+        $_SESSION['flash_success'] = "Anda login sebagai PPIC";
     } else {
         $divName = \App\Services\AccessControl::getDivisionLabel($role);
         $_SESSION['flash_success'] = "🔒 Berhasil beralih role ke: {$divName}.";
