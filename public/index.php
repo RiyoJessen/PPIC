@@ -319,9 +319,50 @@ try {
         exit;
     }
 
+    if ($uri === '/master/storage/raw-materials') {
+        $data = \App\Http\Controllers\MasterController::materials();
+        $data['storageType'] = 'raw';
+        echo view('master.storage', $data);
+        exit;
+    }
+
+    if ($uri === '/master/storage/finish-goods') {
+        $data = \App\Http\Controllers\MasterController::products();
+        $data['storageType'] = 'finish';
+        echo view('master.storage', $data);
+        exit;
+    }
+
+    if ($uri === '/master/storage/formulas') {
+        $data = \App\Http\Controllers\MasterController::boms();
+        $data['storageType'] = 'formula';
+        echo view('master.storage', $data);
+        exit;
+    }
+
+    if ($uri === '/master/storage/forecast') {
+        $data = \App\Http\Controllers\MasterController::materialOverview();
+        $data['storageType'] = 'forecast';
+        echo view('master.storage', $data);
+        exit;
+    }
+
+    if ($uri === '/master/storage/sales') {
+        $data = \App\Http\Controllers\MasterController::materialOverview();
+        $data['storageType'] = 'sales';
+        echo view('master.storage', $data);
+        exit;
+    }
+
     if ($uri === '/master/materials') {
         $data = \App\Http\Controllers\MasterController::materials();
         echo view('master.materials', $data);
+        exit;
+    }
+
+    if ($uri === '/master/materials/detail') {
+        $data = \App\Http\Controllers\MasterController::materialDetail((int) ($_GET['id'] ?? 0));
+        echo view('master.material_detail', $data);
         exit;
     }
 
@@ -395,9 +436,18 @@ try {
     }
 
     if ($uri === '/master/boms/store' && $method === 'POST') {
-        \App\Http\Controllers\MasterController::storeBom($_POST, (int) $_SESSION['user_id']);
-        $_SESSION['flash_success'] = "Formula BOM baru berhasil disimpan.";
-        header('Location: /master/boms');
+        try {
+            \App\Http\Controllers\MasterController::storeBom($_POST, (int) $_SESSION['user_id']);
+            $_SESSION['flash_success'] = "Formula BOM baru berhasil disimpan.";
+            header('Location: /master/boms');
+        } catch (\InvalidArgumentException $e) {
+            $_SESSION['flash_error'] = $e->getMessage();
+            header('Location: /master/boms');
+        } catch (\Throwable $e) {
+            error_log('Gagal menyimpan formula BOM: ' . $e->getMessage());
+            $_SESSION['flash_error'] = 'Formula gagal disimpan. Periksa kembali data bahan dan jumlah per batch.';
+            header('Location: /master/boms');
+        }
         exit;
     }
 

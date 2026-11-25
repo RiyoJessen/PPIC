@@ -31,6 +31,11 @@ Route::prefix('ai')->name('ai.')->group(function () {
 // Master Finish Good, Formula, dan Raw Material
 Route::prefix('master')->name('master.')->group(function () {
     Route::get('/overview', [MasterController::class, 'materialOverview'])->name('overview');
+    Route::get('/storage/raw-materials', [MasterController::class, 'materials'])->name('storage.raw-materials');
+    Route::get('/storage/finish-goods', [MasterController::class, 'products'])->name('storage.finish-goods');
+    Route::get('/storage/formulas', [MasterController::class, 'boms'])->name('storage.formulas');
+    Route::get('/storage/forecast', [MasterController::class, 'materialOverview'])->name('storage.forecast');
+    Route::get('/storage/sales', [MasterController::class, 'materialOverview'])->name('storage.sales');
 
     Route::get('/products', [MasterController::class, 'products'])->name('products.index');
     Route::post('/products/store', [MasterController::class, 'storeProduct'])->name('products.store');

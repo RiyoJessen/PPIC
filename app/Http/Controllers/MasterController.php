@@ -16,6 +16,19 @@ class MasterController extends Controller
             'materials' => self::materials()['materials'],
             'products' => self::products()['products'],
             'boms' => self::boms()['boms'],
+            'sales_forecasts' => Database::select("
+                SELECT sf.*, p.code as product_code, p.name as product_name, p.unit as product_unit
+                FROM sales_forecasts sf
+                JOIN products p ON p.id = sf.product_id
+                ORDER BY sf.forecast_year DESC, p.name ASC
+            "),
+            'sales_histories' => Database::select("
+                SELECT sh.*, p.code as product_code, p.name as product_name, p.unit as product_unit
+                FROM sales_histories sh
+                JOIN products p ON p.id = sh.product_id
+                ORDER BY sh.sale_date DESC, sh.id DESC
+                LIMIT 100
+            "),
         ];
     }
 
@@ -31,6 +44,43 @@ class MasterController extends Controller
             'categories' => $categories,
             'warehouses' => $warehouses,
             'suppliers' => $suppliers,
+        ];
+    }
+
+    public static function materialDetail(int $materialId): array
+    {
+        $material = InventoryService::getMaterialStockSummary($materialId);
+        if (empty($material)) {
+            throw new \RuntimeException('Bahan baku tidak ditemukan.');
+        }
+
+        $arrivals = Database::select("
+            SELECT b.*, w.name as warehouse_name,
+                   sm.reference_number, sm.notes as movement_notes
+            FROM inventory_batches b
+            LEFT JOIN warehouses w ON w.id = b.warehouse_id
+            LEFT JOIN stock_movements sm
+                ON sm.batch_id = b.id
+                AND sm.movement_type IN ('in_manual', 'in_purchase')
+            WHERE b.material_id = :material_id
+            ORDER BY b.received_date DESC, b.id DESC
+        ", ['material_id' => $materialId]);
+
+        $products = Database::select("
+            SELECT p.name as product_name, p.code as product_code,
+                   b.version, b.batch_size, b.unit as batch_unit,
+                   b.is_active, bi.quantity_per_batch, bi.unit as material_unit
+            FROM bom_items bi
+            JOIN boms b ON b.id = bi.bom_id
+            JOIN products p ON p.id = b.product_id
+            WHERE bi.material_id = :material_id
+            ORDER BY p.name ASC, b.id DESC
+        ", ['material_id' => $materialId]);
+
+        return [
+            'material' => $material,
+            'arrivals' => $arrivals,
+            'products' => $products,
         ];
     }
 
@@ -344,6 +394,10 @@ class MasterController extends Controller
                 }
                 $materialId = (int) ($item['material_id'] ?? 0);
                 $quantity = $item['quantity_per_batch'] ?? null;
+                $isBlankQuantity = $quantity === null || trim((string) $quantity) === '';
+                if ($materialId <= 0 && $isBlankQuantity) {
+                    continue;
+                }
                 if ($materialId <= 0 || !is_numeric($quantity) || !is_finite((float) $quantity) || (float) $quantity <= 0) {
                     throw new \InvalidArgumentException('Setiap bahan formula harus memiliki material dan jumlah per batch yang valid.');
                 }
@@ -357,6 +411,9 @@ class MasterController extends Controller
                     'unit' => $material['unit'],
                     'notes' => trim((string) ($item['notes'] ?? '')),
                 ];
+            }
+            if (empty($validItems)) {
+                throw new \InvalidArgumentException('Formula harus memiliki minimal satu bahan baku dan jumlah per batch yang valid.');
             }
 
             Database::update('boms', ['is_active' => 0], 'product_id = :product_id', ['product_id' => $productId]);
@@ -419,6 +476,7 @@ class MasterController extends Controller
         $products = Database::select("
             SELECT p.*,
                    (SELECT COUNT(*) FROM boms WHERE product_id = p.id AND is_active = 1) as has_active_bom,
+                   (SELECT version FROM boms WHERE product_id = p.id AND is_active = 1 ORDER BY id DESC LIMIT 1) as active_bom_version,
                    COALESCE(psb.current_qty, 0) as finished_good_stock
             FROM products p
             LEFT JOIN product_stock_balances psb ON psb.product_id = p.id

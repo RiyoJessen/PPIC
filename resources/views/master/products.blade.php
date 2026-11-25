@@ -7,7 +7,7 @@ $pageTitle = 'Master Produk Jadi DKJ';
     <div>
         <h3 class="fw-bold mb-1 text-dark">Persediaan Produk Jadi</h3>
         <p class="text-muted small mb-0">
-            Daftar produk kimia hasil produksi (koagulan, flokulan, penetral pH) beserta standar batch size dan status formula BOM.
+            Daftar produk kimia hasil produksi beserta stok, standar batch, dan status formula BOM.
         </p>
     </div>
     <div class="d-flex gap-2">
@@ -20,58 +20,160 @@ $pageTitle = 'Master Produk Jadi DKJ';
     </div>
 </div>
 
-<div class="row g-3">
-    <?php foreach ($products as $p): ?>
-        <div class="col-md-6 col-xl-3">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="badge bg-primary-subtle text-primary font-monospace"><?= htmlspecialchars($p['code']) ?></span>
-                        <span class="badge bg-success-subtle text-success">Aktif</span>
-                    </div>
-                    <h5 class="fw-bold text-dark mb-2"><?= htmlspecialchars($p['name']) ?></h5>
-                    <p class="text-muted small mb-3 lh-sm" style="min-height: 40px;">
-                        <?= htmlspecialchars($p['description'] ?? 'Produk kimia industri PT Dunia Kimia Jaya Gresik.') ?>
-                    </p>
-                    <div class="pt-2 border-top small text-muted">
-                        <div class="d-flex justify-content-between mb-1">
-                            <span>Batch Standar:</span>
-                            <strong class="text-dark font-monospace"><?= number_format($p['standard_batch_size'], 0, ',', '.') ?> <?= $p['unit'] ?></strong>
-                        </div>
-                        <div class="d-flex justify-content-between mb-1">
-                            <span>Stok Finish Good:</span>
-                            <strong class="text-dark font-monospace"><?= number_format((float) $p['finished_good_stock'], 0, ',', '.') ?> <?= htmlspecialchars($p['unit']) ?></strong>
-                        </div>
-                        <div class="d-flex justify-content-between">
-                            <span>Formula BOM:</span>
-                            <?php if ((int) $p['has_active_bom'] > 0): ?>
-                                <span class="text-success fw-bold"><i class="fas fa-check-circle me-1"></i>Terhubung</span>
-                            <?php else: ?>
-                                <span class="text-danger fw-bold"><i class="fas fa-triangle-exclamation me-1"></i>Belum ada</span>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                    <form action="/master/products/update-stock" method="POST" class="mt-3 pt-3 border-top">
-                        <input type="hidden" name="product_id" value="<?= (int) $p['id'] ?>">
-                        <label class="form-label small fw-semibold mb-1">Perbarui stok Finish Good (<?= htmlspecialchars($p['unit']) ?>)</label>
-                        <div class="input-group input-group-sm">
-                            <input type="number" name="quantity" class="form-control" min="0" step="0.01" value="<?= htmlspecialchars((string) $p['finished_good_stock']) ?>" required>
-                            <button type="submit" class="btn btn-outline-primary">Simpan</button>
-                        </div>
-                    </form>
-                </div>
-                <div class="card-footer bg-white border-top d-flex justify-content-between align-items-center py-2">
-                    <a href="/master/boms" class="btn btn-link btn-sm text-decoration-none py-0">
-                        Cek Formula BOM &rarr;
-                    </a>
-                    <a href="/master/products/delete?id=<?= $p['id'] ?>" class="btn btn-outline-danger btn-sm py-0 px-2" onclick="return confirm('Yakin ingin menghapus produk <?= htmlspecialchars($p['name']) ?> beserta formulanya?')" title="Hapus Produk">
-                        <i class="fas fa-trash-alt"></i>
-                    </a>
-                </div>
-            </div>
-        </div>
-    <?php endforeach; ?>
+<?php
+$productCount = count($products);
+$withoutFormulaCount = 0;
+$lowStockCount = 0;
+foreach ($products as $product) {
+    if ((int) $product['has_active_bom'] === 0) $withoutFormulaCount++;
+    $standardBatch = (float) ($product['standard_batch_size'] ?? 0);
+    if ($standardBatch > 0 && (float) $product['finished_good_stock'] / $standardBatch < 0.25) $lowStockCount++;
+}
+?>
+<div class="finish-product-toolbar">
+    <div class="finish-product-search">
+        <i class="fas fa-search" aria-hidden="true"></i>
+        <input type="search" id="productSearch" placeholder="Cari produk, kode, atau kategori" aria-label="Cari produk">
+    </div>
+    <div class="finish-product-filters" role="group" aria-label="Filter produk">
+        <button type="button" class="finish-product-filter is-active" data-product-filter="all" aria-pressed="true">Semua <span><?= $productCount ?></span></button>
+        <button type="button" class="finish-product-filter" data-product-filter="no-formula" aria-pressed="false">Tanpa formula <span><?= $withoutFormulaCount ?></span></button>
+        <button type="button" class="finish-product-filter" data-product-filter="low-stock" aria-pressed="false">Stok rendah <span><?= $lowStockCount ?></span></button>
+    </div>
 </div>
+
+<div class="finish-product-table-wrap">
+    <div class="table-responsive">
+        <table class="table finish-product-table align-middle mb-0" id="finishProductTable">
+            <thead>
+                <tr>
+                    <th>Produk</th>
+                    <th class="text-end">Batch standar</th>
+                    <th class="text-end">Stok finish good</th>
+                    <th>Level stok</th>
+                    <th>Formula BOM</th>
+                    <th class="text-end">Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php if (empty($products)): ?>
+                    <tr><td colspan="6" class="finish-product-empty">Belum ada produk jadi yang terdaftar.</td></tr>
+                <?php else: ?>
+                    <?php foreach ($products as $p):
+                        $standardBatch = (float) ($p['standard_batch_size'] ?? 0);
+                        $stock = (float) ($p['finished_good_stock'] ?? 0);
+                        $stockPercent = $standardBatch > 0 ? ($stock / $standardBatch) * 100 : 0;
+                        $stockLevel = $stockPercent < 25 ? 'low' : ($stockPercent < 60 ? 'medium' : 'good');
+                        $hasFormula = (int) $p['has_active_bom'] > 0;
+                        $searchText = strtolower($p['name'] . ' ' . $p['code'] . ' ' . ($p['category'] ?? ''));
+                    ?>
+                        <tr data-product-row data-has-formula="<?= $hasFormula ? '1' : '0' ?>" data-low-stock="<?= $stockPercent < 25 ? '1' : '0' ?>" data-search="<?= htmlspecialchars($searchText, ENT_QUOTES, 'UTF-8') ?>">
+                            <td>
+                                <div class="finish-product-name">
+                                    <strong><?= htmlspecialchars($p['name']) ?></strong>
+                                    <span class="finish-product-active <?= (int) ($p['is_active'] ?? 1) === 1 ? 'is-active' : 'is-inactive' ?>">
+                                        <?= (int) ($p['is_active'] ?? 1) === 1 ? 'Aktif' : 'Nonaktif' ?>
+                                    </span>
+                                </div>
+                                <div class="finish-product-meta">
+                                    <span class="finish-product-code"><?= htmlspecialchars($p['code']) ?></span>
+                                    <span><?= htmlspecialchars($p['category'] ?? 'Produk jadi') ?></span>
+                                </div>
+                            </td>
+                            <td class="text-end font-monospace">
+                                <?= number_format($standardBatch, 0, ',', '.') ?> <?= htmlspecialchars($p['unit']) ?>
+                            </td>
+                            <td class="text-end">
+                                <form action="/master/products/update-stock" method="POST" class="finish-product-stock-form">
+                                    <input type="hidden" name="product_id" value="<?= (int) $p['id'] ?>">
+                                    <label class="visually-hidden" for="product-stock-<?= (int) $p['id'] ?>">Stok <?= htmlspecialchars($p['name']) ?></label>
+                                    <input id="product-stock-<?= (int) $p['id'] ?>" type="number" name="quantity" min="0" step="0.01" value="<?= htmlspecialchars((string) $stock) ?>" required>
+                                    <span><?= htmlspecialchars($p['unit']) ?></span>
+                                    <button type="submit">Simpan</button>
+                                </form>
+                            </td>
+                            <td>
+                                <div class="finish-product-level">
+                                    <div class="finish-product-progress <?= $stockLevel ?>">
+                                        <span style="width:<?= min(100, max($stockPercent > 0 ? 1 : 0, $stockPercent)) ?>%"></span>
+                                    </div>
+                                    <small><?= number_format($stockPercent, 1, ',', '.') ?>% dari batch</small>
+                                </div>
+                            </td>
+                            <td>
+                                <?php if ($hasFormula): ?>
+                                    <div class="finish-product-formula">
+                                        <span class="finish-product-version"><?= htmlspecialchars($p['active_bom_version'] ?? 'Aktif') ?></span>
+                                        <span class="finish-product-active is-active">Aktif</span>
+                                    </div>
+                                <?php else: ?>
+                                    <span class="finish-product-no-formula"><i class="fas fa-triangle-exclamation"></i> Belum ada</span>
+                                <?php endif; ?>
+                            </td>
+                            <td class="text-end">
+                                <div class="finish-product-actions">
+                                    <?php if ($hasFormula): ?>
+                                        <a href="/master/boms" class="finish-product-link">Cek formula <i class="fas fa-arrow-right"></i></a>
+                                    <?php else: ?>
+                                        <a href="/master/boms" class="finish-product-link">Buat formula <i class="fas fa-arrow-right"></i></a>
+                                    <?php endif; ?>
+                                    <a href="/master/products/delete?id=<?= (int) $p['id'] ?>" class="finish-product-delete" onclick="return confirm('Yakin ingin menghapus produk <?= htmlspecialchars($p['name']) ?> beserta formulanya?')" title="Hapus produk <?= htmlspecialchars($p['name']) ?>" aria-label="Hapus produk <?= htmlspecialchars($p['name']) ?>">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                    <tr id="finishProductNoResults" hidden>
+                        <td colspan="6" class="finish-product-empty">Tidak ada produk yang cocok dengan pencarian atau filter.</td>
+                    </tr>
+                <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const table = document.getElementById('finishProductTable');
+    const searchInput = document.getElementById('productSearch');
+    if (!table || !searchInput) return;
+
+    const filterButtons = document.querySelectorAll('[data-product-filter]');
+    const noResults = document.getElementById('finishProductNoResults');
+    let activeFilter = 'all';
+
+    function updateProductList() {
+        const query = searchInput.value.trim().toLowerCase();
+        const rows = Array.from(table.querySelectorAll('[data-product-row]'));
+        let visibleCount = 0;
+
+        rows.forEach(row => {
+            const matchesFilter = activeFilter === 'all'
+                || (activeFilter === 'no-formula' && row.dataset.hasFormula === '0')
+                || (activeFilter === 'low-stock' && row.dataset.lowStock === '1');
+            const matchesSearch = `${row.dataset.search || ''} ${row.textContent}`.toLowerCase().includes(query);
+            row.hidden = !matchesFilter || !matchesSearch;
+            if (!row.hidden) visibleCount++;
+        });
+
+        if (noResults) noResults.hidden = visibleCount > 0;
+    }
+
+    searchInput.addEventListener('input', updateProductList);
+    filterButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            activeFilter = button.dataset.productFilter;
+            filterButtons.forEach(filter => {
+                const isSelected = filter === button;
+                filter.classList.toggle('is-active', isSelected);
+                filter.setAttribute('aria-pressed', String(isSelected));
+            });
+            updateProductList();
+        });
+    });
+});
+</script>
 
 <!-- Modal Create Product -->
 <div class="modal fade" id="createProductModal" tabindex="-1">

@@ -85,6 +85,9 @@ $pageTitle = 'Master Data & Stok Bahan Baku (Raw Material)';
                             </td>
                             <td class="text-center text-nowrap">
                                 <div class="btn-group btn-group-sm">
+                                    <a href="/master/materials/detail?id=<?= (int)$m['id'] ?>" class="btn btn-outline-primary" title="Detail bahan baku">
+                                        <i class="fas fa-eye"></i> Detail
+                                    </a>
                                     <button type="button" class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#updateStockModal" onclick="openUpdateStockModal(<?= (int)$m['id'] ?>, 'in')" title="Update Stok Bahan Baku">
                                         <i class="fas fa-plus-minus"></i> Stok
                                     </button>
