@@ -47,6 +47,7 @@ class AccessControl
             $uri === '/master/overview' ||
             str_starts_with($uri, '/master/materials') ||
             str_starts_with($uri, '/master/products') ||
+            str_starts_with($uri, '/master/formulas') ||
             str_starts_with($uri, '/master/boms')
         ) {
             return self::ROLE_RD;

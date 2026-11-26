@@ -105,6 +105,9 @@ foreach ($products as $product) {
                                     <div class="finish-product-formula">
                                         <span class="finish-product-version"><?= htmlspecialchars($p['active_bom_version'] ?? 'Aktif') ?></span>
                                         <span class="finish-product-active is-active">Aktif</span>
+                                        <?php if (!empty($p['source_formula_code'])): ?>
+                                            <small class="formula-product-meta">Katalog <?= htmlspecialchars($p['source_formula_code']) ?></small>
+                                        <?php endif; ?>
                                     </div>
                                 <?php else: ?>
                                     <span class="finish-product-no-formula"><i class="fas fa-triangle-exclamation"></i> Belum ada</span>
@@ -113,9 +116,9 @@ foreach ($products as $product) {
                             <td class="text-end">
                                 <div class="finish-product-actions">
                                     <?php if ($hasFormula): ?>
-                                        <a href="/master/boms" class="finish-product-link">Cek formula <i class="fas fa-arrow-right"></i></a>
+                                        <a href="/master/products/formula?id=<?= (int) $p['id'] ?>" class="finish-product-link">Kelola &amp; hitung <i class="fas fa-arrow-right"></i></a>
                                     <?php else: ?>
-                                        <a href="/master/boms" class="finish-product-link">Buat formula <i class="fas fa-arrow-right"></i></a>
+                                        <a href="/master/products/formula?id=<?= (int) $p['id'] ?>" class="finish-product-link">Atur formula <i class="fas fa-arrow-right"></i></a>
                                     <?php endif; ?>
                                     <a href="/master/products/delete?id=<?= (int) $p['id'] ?>" class="finish-product-delete" onclick="return confirm('Yakin ingin menghapus produk <?= htmlspecialchars($p['name']) ?> beserta formulanya?')" title="Hapus produk <?= htmlspecialchars($p['name']) ?>" aria-label="Hapus produk <?= htmlspecialchars($p['name']) ?>">
                                         <i class="fas fa-trash-alt"></i>
@@ -207,7 +210,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                         <div class="col-3">
                             <label class="form-label small fw-semibold">Std Batch</label>
-                            <input type="number" step="0.01" name="standard_batch_size" class="form-control form-control-sm" value="5000" required>
+                            <input type="number" min="0.01" step="0.01" name="standard_batch_size" class="form-control form-control-sm" value="5000" required>
                         </div>
                     </div>
 
@@ -220,10 +223,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         <label class="form-label small fw-semibold">Deskripsi / Spesifikasi Teknis</label>
                         <textarea name="description" class="form-control form-control-sm" rows="3" placeholder="Contoh: Larutan koagulan kimia tersintesis untuk proses sedimentasi..."></textarea>
                     </div>
+                    <div class="alert alert-info small mb-0">
+                        Setelah produk disimpan, Anda langsung diarahkan untuk menyusun formula manual atau memilih formula katalog.
+                    </div>
                 </div>
                 <div class="modal-footer bg-light">
                     <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-primary btn-sm px-4">Simpan Produk</button>
+                    <button type="submit" class="btn btn-primary btn-sm px-4">Simpan &amp; lanjut ke formula</button>
                 </div>
             </form>
         </div>

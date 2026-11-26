@@ -6,6 +6,8 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 
 use App\Database\Database;
+use App\Services\FormulaCatalogService;
+use App\Services\FormulaRequirementCalculator;
 use App\Services\InventoryService;
 
 class MasterController extends Controller
@@ -295,18 +297,28 @@ class MasterController extends Controller
     public static function storeProduct(array $data, int $userId): int
     {
         $initialStock = $data['initial_stock'] ?? 0;
+        $standardBatchSize = $data['standard_batch_size'] ?? 1000;
+        $code = trim((string) ($data['code'] ?? ''));
+        $name = trim((string) ($data['name'] ?? ''));
+        $unit = trim((string) ($data['unit'] ?? 'Kg'));
+        if ($code === '' || $name === '' || $unit === '') {
+            throw new \InvalidArgumentException('Kode, nama, dan satuan produk wajib diisi.');
+        }
         if (!is_numeric($initialStock) || !is_finite((float) $initialStock) || (float) $initialStock < 0) {
             throw new \InvalidArgumentException('Stok awal Finish Good harus berupa angka nol atau lebih.');
+        }
+        if (!is_numeric($standardBatchSize) || !is_finite((float) $standardBatchSize) || (float) $standardBatchSize <= 0) {
+            throw new \InvalidArgumentException('Batch standar produk harus berupa angka lebih dari nol.');
         }
 
         Database::beginTransaction();
         try {
             $id = Database::insert('products', [
-                'code' => trim($data['code']),
-                'name' => trim($data['name']),
+                'code' => $code,
+                'name' => $name,
                 'category' => trim($data['category'] ?? 'Koagulan Cair'),
-                'unit' => trim($data['unit'] ?? 'Kg'),
-                'standard_batch_size' => (float) ($data['standard_batch_size'] ?? 1000),
+                'unit' => $unit,
+                'standard_batch_size' => (float) $standardBatchSize,
                 'description' => trim($data['description'] ?? ''),
                 'is_active' => 1,
             ]);
@@ -484,6 +496,11 @@ class MasterController extends Controller
             SELECT p.*,
                    (SELECT COUNT(*) FROM boms WHERE product_id = p.id AND is_active = 1) as has_active_bom,
                    (SELECT version FROM boms WHERE product_id = p.id AND is_active = 1 ORDER BY id DESC LIMIT 1) as active_bom_version,
+                   (SELECT fc.formula_code
+                    FROM boms active_bom
+                    LEFT JOIN formula_catalog fc ON fc.id = active_bom.source_formula_id
+                    WHERE active_bom.product_id = p.id AND active_bom.is_active = 1
+                    ORDER BY active_bom.id DESC LIMIT 1) as source_formula_code,
                    COALESCE(psb.current_qty, 0) as finished_good_stock
             FROM products p
             LEFT JOIN product_stock_balances psb ON psb.product_id = p.id
@@ -544,7 +561,360 @@ class MasterController extends Controller
         }
     }
 
-    public static function boms(): array
+    public static function productFormulaDetail(int $productId): array
+    {
+        if ($productId <= 0) {
+            throw new \InvalidArgumentException('Produk jadi tidak valid.');
+        }
+
+        $product = Database::selectOne("
+            SELECT p.*, COALESCE(psb.current_qty, 0) as finished_good_stock
+            FROM products p
+            LEFT JOIN product_stock_balances psb ON psb.product_id = p.id
+            WHERE p.id = :id
+        ", ['id' => $productId]);
+        if (!$product) {
+            throw new \RuntimeException('Produk jadi tidak ditemukan.');
+        }
+
+        $bom = Database::selectOne("
+            SELECT b.*, fc.formula_code as source_formula_code,
+                   fc.product_name as source_formula_product_name
+            FROM boms b
+            LEFT JOIN formula_catalog fc ON fc.id = b.source_formula_id
+            WHERE b.product_id = :product_id AND b.is_active = 1
+            ORDER BY b.id DESC
+            LIMIT 1
+        ", ['product_id' => $productId]);
+
+        $calculation = null;
+        if ($bom) {
+            $items = Database::select("
+                SELECT bi.*, m.code as material_code, m.name as material_name,
+                       m.unit as material_unit, fci.fraction as source_fraction,
+                       COALESCE((
+                           SELECT SUM(ib.current_qty)
+                           FROM inventory_batches ib
+                           WHERE ib.material_id = m.id AND ib.status = 'active'
+                       ), 0) as physical_stock,
+                       COALESCE((
+                           SELECT SUM(ib.allocated_qty)
+                           FROM inventory_batches ib
+                           WHERE ib.material_id = m.id AND ib.status = 'active'
+                       ), 0) as allocated_stock
+                FROM bom_items bi
+                JOIN materials m ON m.id = bi.material_id
+                LEFT JOIN formula_catalog_items fci ON fci.id = bi.source_formula_item_id
+                WHERE bi.bom_id = :bom_id
+                ORDER BY bi.id ASC
+            ", ['bom_id' => $bom['id']]);
+
+            $totalPercentage = 0.0;
+            foreach ($items as &$item) {
+                $item['available_stock'] = max(
+                    0.0,
+                    (float) $item['physical_stock'] - (float) $item['allocated_stock']
+                );
+                $item['formula_percentage'] = $item['source_fraction'] !== null
+                    ? (float) $item['source_fraction'] * 100
+                    : ((float) $bom['batch_size'] > 0
+                        ? ((float) $item['quantity_per_batch'] / (float) $bom['batch_size']) * 100
+                        : 0.0);
+                $totalPercentage += $item['formula_percentage'];
+            }
+            unset($item);
+
+            $targetOutput = (float) $product['standard_batch_size'];
+            if ($targetOutput <= 0) {
+                $targetOutput = (float) $bom['batch_size'] * ((float) $bom['yield_pct'] / 100);
+            }
+            $calculation = FormulaRequirementCalculator::calculate(
+                $targetOutput,
+                (float) $bom['batch_size'],
+                (float) $bom['yield_pct'],
+                $items
+            );
+            $bom['items'] = $calculation['items'];
+            $bom['total_formula_percentage'] = $totalPercentage;
+            $bom['expected_batch_output'] = $calculation['expected_batch_output'];
+            $bom['default_target_output'] = $targetOutput;
+        }
+
+        return [
+            'product' => $product,
+            'bom' => $bom,
+            'materials' => Database::select('SELECT id, code, name, unit FROM materials WHERE is_active = 1 ORDER BY name ASC'),
+            'formula_catalog' => FormulaCatalogService::getCatalog(),
+        ];
+    }
+
+    public static function storeManualProductFormula(array $data, int $userId): int
+    {
+        $productId = (int) ($data['product_id'] ?? 0);
+        $version = trim((string) ($data['version'] ?? 'manual-v1'));
+        $rawItems = $data['items'] ?? null;
+        if ($productId <= 0 || !\is_array($rawItems) || $rawItems === []) {
+            throw new \InvalidArgumentException('Pilih produk jadi dan masukkan minimal satu bahan formula.');
+        }
+        if ($version === '' || \strlen($version) > 20) {
+            throw new \InvalidArgumentException('Versi formula wajib diisi dan maksimal 20 karakter.');
+        }
+
+        $product = Database::selectOne(
+            'SELECT id, code, name, unit, standard_batch_size FROM products WHERE id = :id',
+            ['id' => $productId]
+        );
+        if (!$product) {
+            throw new \InvalidArgumentException('Produk jadi tidak ditemukan.');
+        }
+        $batchSize = (float) $product['standard_batch_size'];
+        if (!is_finite($batchSize) || $batchSize <= 0) {
+            throw new \InvalidArgumentException('Ukuran batch standar produk harus lebih dari nol.');
+        }
+
+        $activeBom = Database::selectOne(
+            'SELECT id, version FROM boms WHERE product_id = :product_id AND is_active = 1 ORDER BY id DESC LIMIT 1',
+            ['product_id' => $productId]
+        );
+        if ($activeBom && (string) ($data['replace_active_bom'] ?? '') !== '1') {
+            throw new \InvalidArgumentException(
+                'Produk ini sudah memiliki BOM aktif ' . $activeBom['version']
+                . '. Konfirmasikan penggantian BOM aktif sebelum menyimpan formula manual.'
+            );
+        }
+
+        $validItems = [];
+        foreach ($rawItems as $item) {
+            if (!\is_array($item)) {
+                throw new \InvalidArgumentException('Format baris bahan formula tidak valid.');
+            }
+            $materialId = (int) ($item['material_id'] ?? 0);
+            $percentageValue = $item['percentage'] ?? null;
+            $isBlankPercentage = $percentageValue === null || trim((string) $percentageValue) === '';
+            if ($materialId <= 0 && $isBlankPercentage) {
+                continue;
+            }
+            if ($materialId <= 0 || !is_numeric($percentageValue)
+                || !is_finite((float) $percentageValue) || (float) $percentageValue <= 0
+                || (float) $percentageValue > 100) {
+                throw new \InvalidArgumentException('Setiap baris formula harus memiliki material dan persentase 0-100 yang valid.');
+            }
+
+            $material = Database::selectOne(
+                'SELECT id, code, unit FROM materials WHERE id = :id AND is_active = 1',
+                ['id' => $materialId]
+            );
+            if (!$material) {
+                throw new \InvalidArgumentException('Pilih material aktif yang terdaftar untuk setiap bahan formula.');
+            }
+            if (strcasecmp(trim((string) $material['unit']), trim((string) $product['unit'])) !== 0) {
+                throw new \InvalidArgumentException(
+                    'Satuan material ' . $material['code'] . ' (' . $material['unit']
+                    . ') harus sama dengan satuan produk (' . $product['unit'] . ') untuk kalkulasi persentase.'
+                );
+            }
+
+            $percentage = (float) $percentageValue;
+            $quantity = $batchSize * ($percentage / 100);
+            if (!is_finite($quantity) || $quantity <= 0) {
+                throw new \InvalidArgumentException('Hasil perhitungan bahan ' . $material['code'] . ' tidak valid.');
+            }
+            $validItems[] = [
+                'material_id' => $materialId,
+                'quantity_per_batch' => $quantity,
+                'unit' => $material['unit'],
+                'notes' => 'Persentase manual: ' . $percentage . '%',
+            ];
+        }
+        if ($validItems === []) {
+            throw new \InvalidArgumentException('Formula harus memiliki minimal satu bahan dan persentase yang valid.');
+        }
+
+        Database::beginTransaction();
+        try {
+            Database::update('boms', ['is_active' => 0], 'product_id = :product_id', ['product_id' => $productId]);
+            $bomId = Database::insert('boms', [
+                'product_id' => $productId,
+                'version' => $version,
+                'batch_size' => $batchSize,
+                'unit' => $product['unit'],
+                'yield_pct' => 100,
+                'scrap_pct' => 0,
+                'is_active' => 1,
+                'notes' => 'Formula dimasukkan manual dari halaman Finish Good; persentase tidak dinormalisasi.',
+            ]);
+
+            foreach ($validItems as $item) {
+                Database::insert('bom_items', [
+                    'bom_id' => $bomId,
+                    'material_id' => $item['material_id'],
+                    'quantity_per_batch' => $item['quantity_per_batch'],
+                    'unit' => $item['unit'],
+                    'notes' => $item['notes'],
+                ]);
+            }
+
+            Database::insert('audit_logs', [
+                'user_id' => $userId,
+                'action' => 'CREATE_MANUAL_FINISHED_GOOD_BOM',
+                'module' => 'Finish Good',
+                'description' => "Membuat BOM manual {$version} untuk produk jadi {$product['name']} ({$product['code']}).",
+                'ip_address' => '127.0.0.1',
+                'created_at' => date('Y-m-d H:i:s'),
+            ]);
+
+            Database::commit();
+            return $productId;
+        } catch (\Throwable $e) {
+            Database::rollBack();
+            throw $e;
+        }
+    }
+
+    public static function linkFormulaToProduct(array $data, int $userId): int
+    {
+        $productId = (int) ($data['product_id'] ?? 0);
+        $formulaId = (int) ($data['formula_id'] ?? 0);
+        $materialIds = $data['material_ids'] ?? null;
+        if ($productId <= 0 || $formulaId <= 0 || !\is_array($materialIds)) {
+            throw new \InvalidArgumentException('Produk, formula, dan pemetaan bahan harus dipilih.');
+        }
+
+        $formula = FormulaCatalogService::getFormulaDetail($formulaId);
+        if (!$formula) {
+            throw new \InvalidArgumentException('Varian formula katalog tidak ditemukan.');
+        }
+        $product = Database::selectOne(
+            'SELECT id, code, name, unit, standard_batch_size FROM products WHERE id = :id',
+            ['id' => $productId]
+        );
+        if (!$product) {
+            throw new \InvalidArgumentException('Produk jadi yang dipilih tidak ditemukan.');
+        }
+
+        $batchSize = (float) $product['standard_batch_size'];
+        if (!is_finite($batchSize) || $batchSize <= 0) {
+            throw new \InvalidArgumentException('Ukuran batch standar produk harus lebih dari nol.');
+        }
+        if (\strlen((string) $formula['formula_code']) > 20) {
+            throw new \InvalidArgumentException('Kode formula terlalu panjang untuk menjadi versi BOM.');
+        }
+        $existingLinkedBom = Database::selectOne(
+            'SELECT id FROM boms WHERE product_id = :product_id AND source_formula_id = :formula_id LIMIT 1',
+            ['product_id' => $productId, 'formula_id' => $formulaId]
+        );
+        $activeBom = Database::selectOne(
+            'SELECT id, version FROM boms WHERE product_id = :product_id AND is_active = 1 ORDER BY id DESC LIMIT 1',
+            ['product_id' => $productId]
+        );
+        if ($existingLinkedBom && $activeBom
+            && (int) $existingLinkedBom['id'] === (int) $activeBom['id']) {
+            return $productId;
+        }
+        if ($activeBom && (string) ($data['replace_active_bom'] ?? '') !== '1') {
+            throw new \InvalidArgumentException(
+                'Produk ini sudah memiliki BOM aktif ' . $activeBom['version']
+                . '. Konfirmasikan penggantian BOM aktif sebelum menghubungkan formula baru.'
+            );
+        }
+        if ($existingLinkedBom) {
+            Database::beginTransaction();
+            try {
+                Database::update('boms', ['is_active' => 0], 'product_id = :product_id', ['product_id' => $productId]);
+                Database::update('boms', ['is_active' => 1], 'id = :id', ['id' => $existingLinkedBom['id']]);
+                Database::insert('audit_logs', [
+                    'user_id' => $userId,
+                    'action' => 'ACTIVATE_CATALOG_FORMULA',
+                    'module' => 'Finish Good',
+                    'description' => "Mengaktifkan kembali formula {$formula['formula_code']} untuk produk jadi {$product['name']} ({$product['code']}).",
+                    'ip_address' => '127.0.0.1',
+                    'created_at' => date('Y-m-d H:i:s'),
+                ]);
+                Database::commit();
+                return $productId;
+            } catch (\Throwable $e) {
+                Database::rollBack();
+                throw $e;
+            }
+        }
+
+        $validItems = [];
+        foreach ($formula['items'] as $formulaItem) {
+            $formulaItemId = (int) $formulaItem['id'];
+            $materialId = (int) ($materialIds[$formulaItemId] ?? 0);
+            $material = $materialId > 0
+                ? Database::selectOne('SELECT id, code, unit FROM materials WHERE id = :id AND is_active = 1', ['id' => $materialId])
+                : null;
+            if (!$material) {
+                throw new \InvalidArgumentException('Pilih material terdaftar untuk bahan ' . $formulaItem['material_code'] . '.');
+            }
+            if (strcasecmp(trim((string) $material['unit']), trim((string) $product['unit'])) !== 0) {
+                throw new \InvalidArgumentException(
+                    'Satuan material ' . $material['code'] . ' (' . $material['unit']
+                    . ') harus sama dengan satuan produk (' . $product['unit'] . ') untuk kalkulasi persentase.'
+                );
+            }
+
+            $quantity = $batchSize * (float) $formulaItem['fraction'];
+            if (!is_finite($quantity) || $quantity <= 0) {
+                throw new \InvalidArgumentException('Hasil perhitungan bahan ' . $formulaItem['material_code'] . ' tidak valid.');
+            }
+            $validItems[] = [
+                'source_formula_item_id' => $formulaItemId,
+                'material_id' => $materialId,
+                'quantity_per_batch' => $quantity,
+                'unit' => $material['unit'],
+                'notes' => 'Sumber: ' . $formulaItem['material_code'],
+            ];
+        }
+        if (\count($validItems) !== \count($formula['items'])) {
+            throw new \InvalidArgumentException('Seluruh bahan formula harus dipetakan ke material.');
+        }
+
+        Database::beginTransaction();
+        try {
+            Database::update('boms', ['is_active' => 0], 'product_id = :product_id', ['product_id' => $productId]);
+            $bomId = Database::insert('boms', [
+                'product_id' => $productId,
+                'version' => $formula['formula_code'],
+                'batch_size' => $batchSize,
+                'unit' => $product['unit'],
+                'yield_pct' => 100,
+                'scrap_pct' => 0,
+                'is_active' => 1,
+                'source_formula_id' => $formulaId,
+                'notes' => 'Terhubung dari katalog formula Vaslina; komposisi asli tidak dinormalisasi.',
+            ]);
+
+            foreach ($validItems as $item) {
+                Database::insert('bom_items', [
+                    'bom_id' => $bomId,
+                    'material_id' => $item['material_id'],
+                    'quantity_per_batch' => $item['quantity_per_batch'],
+                    'unit' => $item['unit'],
+                    'notes' => $item['notes'],
+                    'source_formula_item_id' => $item['source_formula_item_id'],
+                ]);
+            }
+
+            Database::insert('audit_logs', [
+                'user_id' => $userId,
+                'action' => 'LINK_CATALOG_FORMULA',
+                'module' => 'Finish Good',
+                'description' => "Menghubungkan formula {$formula['formula_code']} ke produk jadi {$product['name']} ({$product['code']}).",
+                'ip_address' => '127.0.0.1',
+                'created_at' => date('Y-m-d H:i:s'),
+            ]);
+
+            Database::commit();
+            return $productId;
+        } catch (\Throwable $e) {
+            Database::rollBack();
+            throw $e;
+        }
+    }
+
+    public static function boms(int $selectedProductId = 0): array
     {
         $boms = Database::select("
             SELECT b.*, p.name as product_name, p.code as product_code
@@ -569,6 +939,35 @@ class MasterController extends Controller
             'boms' => $boms,
             'products' => $products,
             'materials' => $materials,
+            'formula_catalog' => FormulaCatalogService::getCatalog(),
+            'selected_product_id' => $selectedProductId,
+        ];
+    }
+
+    public static function formulaCatalogDetail(int $formulaId, int $selectedProductId = 0): array
+    {
+        if ($formulaId <= 0) {
+            throw new \InvalidArgumentException('Varian formula tidak valid.');
+        }
+
+        $formula = FormulaCatalogService::getFormulaDetail($formulaId);
+        if (!$formula) {
+            throw new \RuntimeException('Varian formula tidak ditemukan.');
+        }
+
+        $products = Database::select("
+            SELECT p.*,
+                   (SELECT version FROM boms WHERE product_id = p.id AND is_active = 1 ORDER BY id DESC LIMIT 1) as active_bom_version
+            FROM products p
+            WHERE p.is_active = 1
+            ORDER BY p.name ASC
+        ");
+
+        return [
+            'formula' => $formula,
+            'products' => $products,
+            'materials' => Database::select('SELECT id, code, name, unit FROM materials WHERE is_active = 1 ORDER BY name ASC'),
+            'selected_product_id' => $selectedProductId,
         ];
     }
 

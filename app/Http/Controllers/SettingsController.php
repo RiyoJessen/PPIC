@@ -131,22 +131,37 @@ class SettingsController extends Controller
 
     public static function importMaterialsCsv(string $csvContent, int $userId): int
     {
-        $lines = explode("\n", str_replace("\r", "", trim($csvContent)));
-        if (count($lines) < 2) return 0;
+        // XLSX files are ZIP containers and begin with PK. Do not let binary
+        // bytes fall through to the legacy positional CSV parser.
+        if (str_starts_with($csvContent, "PK\x03\x04")) {
+            throw new \InvalidArgumentException('File yang dipilih adalah Excel (.xlsx), bukan CSV. Simpan atau ekspor file sebagai CSV terlebih dahulu.');
+        }
 
+        $lines = explode("\n", str_replace("\r", "", trim($csvContent)));
+        if (count($lines) < 2) {
+            throw new \InvalidArgumentException('File CSV kosong atau hanya berisi header.');
+        }
+
+        // Excel may add a UTF-8 BOM to the first header cell.
+        $firstLine = preg_replace('/^\xEF\xBB\xBF/', '', (string) array_shift($lines));
         $header = array_map(
             static fn(string $column): string => strtolower(trim($column)),
-            str_getcsv(array_shift($lines))
+            str_getcsv($firstLine, ',', '"', '')
         );
         $headerIndexes = array_flip($header);
         $hasNamedHeader = isset($headerIndexes['code']) && isset($headerIndexes['name']);
+        if (!$hasNamedHeader && count($header) < 3) {
+            throw new \InvalidArgumentException('Format CSV tidak dikenali. Gunakan template dengan kolom code, name, unit, min_stock, lead_time_days, moq, unit_cost.');
+        }
         $count = 0;
 
         Database::beginTransaction();
         try {
             foreach ($lines as $line) {
                 if (trim($line) === '') continue;
-                $row = str_getcsv($line);
+                // Pass an explicit empty escape character. PHP 8.4 deprecates
+                // relying on str_getcsv()'s non-empty default escape value.
+                $row = str_getcsv($line, ',', '"', '');
                 if (count($row) < 3) continue;
 
                 if ($hasNamedHeader) {
@@ -217,5 +232,65 @@ class SettingsController extends Controller
             Database::rollBack();
             throw $e;
         }
+    }
+
+    public static function importMaterialsXlsx(string $path, int $userId): int
+    {
+        $sheets = \App\Services\RawMaterialWorkbookImportService::readWorkbookSheets($path);
+        $csv = fopen('php://temp', 'r+');
+        if ($csv === false) {
+            throw new \RuntimeException('Tidak dapat menyiapkan data workbook untuk diimpor.');
+        }
+
+        $columns = ['code', 'name', 'unit', 'min_stock', 'lead_time_days', 'moq', 'unit_cost'];
+        fputcsv($csv, $columns, ',', '"', '');
+        $importedRows = 0;
+
+        foreach ($sheets as $rows) {
+            if (empty($rows)) continue;
+            $indexes = [];
+            foreach (array_keys($rows[0]) as $header) {
+                $normalized = strtolower(trim((string) $header));
+                $normalized = preg_replace('/^\xEF\xBB\xBF/', '', $normalized);
+                $indexes[$normalized] = $header;
+            }
+            if (!isset($indexes['code'], $indexes['name'])) continue;
+
+            foreach ($rows as $row) {
+                $values = [];
+                foreach ($columns as $column) {
+                    $aliases = match ($column) {
+                        'min_stock' => ['min_stock', 'minimum_stock'],
+                        'lead_time_days' => ['lead_time_days', 'lead_time'],
+                        default => [$column],
+                    };
+                    $value = '';
+                    foreach ($aliases as $alias) {
+                        if (isset($indexes[$alias])) {
+                            $value = $row[$indexes[$alias]] ?? '';
+                            break;
+                        }
+                    }
+                    $values[] = $value;
+                }
+                if (trim((string) $values[0]) === '' && trim((string) $values[1]) === '') continue;
+                fputcsv($csv, $values, ',', '"', '');
+                $importedRows++;
+            }
+        }
+
+        if ($importedRows === 0) {
+            fclose($csv);
+            throw new \InvalidArgumentException('Workbook tidak memiliki baris dengan header code dan name. Gunakan kolom code, name, unit, min_stock, lead_time_days, moq, unit_cost.');
+        }
+
+        rewind($csv);
+        $csvContent = stream_get_contents($csv);
+        fclose($csv);
+        if ($csvContent === false) {
+            throw new \RuntimeException('Data workbook gagal dibaca.');
+        }
+
+        return self::importMaterialsCsv($csvContent, $userId);
     }
 }

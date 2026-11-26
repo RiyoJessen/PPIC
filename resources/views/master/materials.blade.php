@@ -118,22 +118,22 @@ $pageTitle = 'Master Data & Stok Bahan Baku (Raw Material)';
     </div>
 </div>
 
-<!-- Modal Import CSV -->
+<!-- Modal Import Bahan Baku -->
 <div class="modal fade" id="importCsvModal" tabindex="-1" aria-labelledby="importCsvModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <form action="/master/materials/import-csv" method="POST" enctype="multipart/form-data">
                 <div class="modal-header">
                     <h6 class="modal-title fw-bold" id="importCsvModalLabel">
-                        <i class="fas fa-file-csv me-2 text-success"></i> Impor Data Bahan Baku dari CSV
+                        <i class="fas fa-file-excel me-2 text-success"></i> Impor Data Bahan Baku
                     </h6>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
                 </div>
                 <div class="modal-body">
-                    <label for="materialCsvFile" class="form-label small fw-semibold">Pilih File CSV</label>
-                    <input type="file" id="materialCsvFile" name="csv_file" class="form-control form-control-sm" accept=".csv,text/csv" required>
+                    <label for="materialCsvFile" class="form-label small fw-semibold">Pilih File Excel (.xlsx) atau CSV</label>
+                    <input type="file" id="materialCsvFile" name="csv_file" class="form-control form-control-sm" accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv" required>
                     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2">
-                        <small class="text-muted">Kolom: <code>code, name, unit, min_stock, lead_time_days, moq, unit_cost</code></small>
+                        <small class="text-muted">Kolom wajib: <code>code, name</code>. Kolom lain: <code>unit, min_stock, lead_time_days, moq, unit_cost</code></small>
                         <a href="/master/materials/download-template" class="small text-decoration-none fw-semibold">
                             <i class="fas fa-download me-1"></i> Unduh Template CSV
                         </a>
@@ -142,7 +142,7 @@ $pageTitle = 'Master Data & Stok Bahan Baku (Raw Material)';
                 <div class="modal-footer bg-light">
                     <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
                     <button type="submit" class="btn btn-success btn-sm px-4">
-                        <i class="fas fa-upload me-1"></i> Impor CSV
+                        <i class="fas fa-upload me-1"></i> Impor Data
                     </button>
                 </div>
             </form>

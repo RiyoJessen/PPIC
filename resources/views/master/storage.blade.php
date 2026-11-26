@@ -128,11 +128,13 @@ $pageTitle = $storageConfig['title'];
                             <th>Kategori</th>
                             <th class="text-end">Stok Finish Good</th>
                             <th class="text-end">Batch Standar</th>
+                            <th>Formula BOM</th>
+                            <th class="text-end">Perhitungan</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php if (empty($products)): ?>
-                            <tr><td colspan="5" class="material-storage-empty">Belum ada data Finish Good.</td></tr>
+                            <tr><td colspan="7" class="material-storage-empty">Belum ada data Finish Good.</td></tr>
                         <?php else: ?>
                             <?php foreach ($products as $product): ?>
                                 <tr>
@@ -149,6 +151,25 @@ $pageTitle = $storageConfig['title'];
                                     <td class="text-end font-monospace">
                                         <?= number_format((float) $product['standard_batch_size'], 0, ',', '.') ?>
                                         <?= htmlspecialchars($product['unit']) ?>
+                                    </td>
+                                    <td>
+                                        <?php if ((int) $product['has_active_bom'] > 0): ?>
+                                            <span class="material-storage-code"><?= htmlspecialchars($product['active_bom_version']) ?></span>
+                                            <?php if (!empty($product['source_formula_code'])): ?>
+                                                <div class="material-storage-meta">Katalog <?= htmlspecialchars($product['source_formula_code']) ?></div>
+                                            <?php endif; ?>
+                                        <?php else: ?>
+                                            <span class="text-muted">Belum ada</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td class="text-end">
+                                        <?php if ((int) $product['has_active_bom'] > 0): ?>
+                                            <a href="/master/products/formula?id=<?= (int) $product['id'] ?>" class="material-storage-detail-link">
+                                                Hitung kebutuhan <i class="fas fa-arrow-right"></i>
+                                            </a>
+                                        <?php else: ?>
+                                            <a href="/master/products/formula?id=<?= (int) $product['id'] ?>" class="material-storage-detail-link">Atur formula</a>
+                                        <?php endif; ?>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>

@@ -35,6 +35,7 @@ if (!function_exists('view')) {
 try {
     \App\Database\Migration::run();
     \App\Database\Seeder::ensureBaseSystemReferences();
+    \App\Services\FormulaCatalogService::ensureSeeded();
 } catch (\Throwable $e) {
     die("Inisialisasi Database Error: " . $e->getMessage());
 }
@@ -424,10 +425,67 @@ try {
         exit;
     }
 
+    if ($uri === '/master/products/formula') {
+        $data = \App\Http\Controllers\MasterController::productFormulaDetail((int) ($_GET['id'] ?? 0));
+        echo view('master.product_formula', $data);
+        exit;
+    }
+
+    if ($uri === '/master/products/formula/store' && $method === 'POST') {
+        $productId = (int) ($_POST['product_id'] ?? 0);
+        $errorLocation = $productId > 0 ? '/master/products/formula?id=' . $productId : '/master/products';
+        try {
+            $productId = \App\Http\Controllers\MasterController::storeManualProductFormula(
+                $_POST,
+                (int) $_SESSION['user_id']
+            );
+            $_SESSION['flash_success'] = 'Formula manual berhasil disimpan dan diaktifkan.';
+            header('Location: /master/products/formula?id=' . $productId);
+        } catch (\InvalidArgumentException $e) {
+            $_SESSION['flash_error'] = $e->getMessage();
+            header('Location: ' . $errorLocation);
+        } catch (\Throwable $e) {
+            error_log('Gagal menyimpan formula manual Finish Good: ' . $e->getMessage());
+            $_SESSION['flash_error'] = 'Formula manual gagal disimpan. Periksa kembali bahan dan persentasenya.';
+            header('Location: ' . $errorLocation);
+        }
+        exit;
+    }
+
+    if ($uri === '/master/products/formula/link-catalog' && $method === 'POST') {
+        $productId = (int) ($_POST['product_id'] ?? 0);
+        $errorLocation = $productId > 0 ? '/master/products/formula?id=' . $productId : '/master/products';
+        try {
+            $productId = \App\Http\Controllers\MasterController::linkFormulaToProduct(
+                $_POST,
+                (int) $_SESSION['user_id']
+            );
+            $_SESSION['flash_success'] = 'Formula katalog berhasil dihubungkan dan diaktifkan.';
+            header('Location: /master/products/formula?id=' . $productId);
+        } catch (\InvalidArgumentException $e) {
+            $_SESSION['flash_error'] = $e->getMessage();
+            header('Location: ' . $errorLocation);
+        } catch (\Throwable $e) {
+            error_log('Gagal menghubungkan formula katalog dari Finish Good: ' . $e->getMessage());
+            $_SESSION['flash_error'] = 'Formula katalog gagal dihubungkan. Periksa pemetaan material dan satuannya.';
+            header('Location: ' . $errorLocation);
+        }
+        exit;
+    }
+
     if ($uri === '/master/products/store' && $method === 'POST') {
-        \App\Http\Controllers\MasterController::storeProduct($_POST, (int) $_SESSION['user_id']);
-        $_SESSION['flash_success'] = "Master produk jadi baru berhasil ditambahkan.";
-        header('Location: /master/products');
+        try {
+            $productId = \App\Http\Controllers\MasterController::storeProduct($_POST, (int) $_SESSION['user_id']);
+            $_SESSION['flash_success'] = "Master produk jadi baru berhasil ditambahkan.";
+            header('Location: /master/products/formula?id=' . $productId);
+        } catch (\InvalidArgumentException $e) {
+            $_SESSION['flash_error'] = $e->getMessage();
+            header('Location: /master/products');
+        } catch (\Throwable $e) {
+            error_log('Gagal menambahkan produk jadi: ' . $e->getMessage());
+            $_SESSION['flash_error'] = 'Produk jadi gagal ditambahkan. Periksa kembali kode dan data produk.';
+            header('Location: /master/products');
+        }
         exit;
     }
 
@@ -446,8 +504,41 @@ try {
         exit;
     }
 
+    if ($uri === '/master/formulas/detail') {
+        $data = \App\Http\Controllers\MasterController::formulaCatalogDetail(
+            (int) ($_GET['id'] ?? 0),
+            (int) ($_GET['product_id'] ?? 0)
+        );
+        echo view('master.formula_detail', $data);
+        exit;
+    }
+
+    if ($uri === '/master/formulas/link-to-finished-good' && $method === 'POST') {
+        $formulaId = (int) ($_POST['formula_id'] ?? 0);
+        $productId = (int) ($_POST['product_id'] ?? 0);
+        $errorLocation = $formulaId > 0
+            ? '/master/formulas/detail?id=' . $formulaId . ($productId > 0 ? '&product_id=' . $productId : '')
+            : '/master/boms';
+        try {
+            $productId = \App\Http\Controllers\MasterController::linkFormulaToProduct(
+                $_POST,
+                (int) $_SESSION['user_id']
+            );
+            $_SESSION['flash_success'] = 'Formula katalog berhasil dihubungkan ke Produk Jadi.';
+            header('Location: /master/products/formula?id=' . $productId);
+        } catch (\InvalidArgumentException $e) {
+            $_SESSION['flash_error'] = $e->getMessage();
+            header('Location: ' . $errorLocation);
+        } catch (\Throwable $e) {
+            error_log('Gagal menghubungkan formula katalog ke Produk Jadi: ' . $e->getMessage());
+            $_SESSION['flash_error'] = 'Formula gagal dihubungkan. Periksa pemetaan material dan satuannya.';
+            header('Location: ' . $errorLocation);
+        }
+        exit;
+    }
+
     if ($uri === '/master/boms') {
-        $data = \App\Http\Controllers\MasterController::boms();
+        $data = \App\Http\Controllers\MasterController::boms((int) ($_GET['product_id'] ?? 0));
         echo view('master.boms', $data);
         exit;
     }
@@ -540,11 +631,26 @@ try {
 
     if (($uri === '/master/materials/import-csv' || $uri === '/settings/import-csv') && $method === 'POST') {
         if (!empty($_FILES['csv_file']['tmp_name'])) {
-            $content = file_get_contents($_FILES['csv_file']['tmp_name']);
-            $count = \App\Http\Controllers\SettingsController::importMaterialsCsv($content, (int) $_SESSION['user_id']);
-            $_SESSION['flash_success'] = "Berhasil mengimpor {$count} data bahan baku dari file CSV!";
+            try {
+                $uploadPath = (string) $_FILES['csv_file']['tmp_name'];
+                $extension = strtolower(pathinfo((string) ($_FILES['csv_file']['name'] ?? ''), PATHINFO_EXTENSION));
+                if ($extension === 'xlsx') {
+                    $count = \App\Http\Controllers\SettingsController::importMaterialsXlsx($uploadPath, (int) $_SESSION['user_id']);
+                } elseif ($extension === 'csv') {
+                    $content = file_get_contents($uploadPath);
+                    if ($content === false) {
+                        throw new \RuntimeException('File CSV gagal dibaca.');
+                    }
+                    $count = \App\Http\Controllers\SettingsController::importMaterialsCsv($content, (int) $_SESSION['user_id']);
+                } else {
+                    throw new \InvalidArgumentException('Format file tidak didukung. Pilih file Excel .xlsx atau CSV.');
+                }
+                $_SESSION['flash_success'] = "Berhasil mengimpor {$count} data bahan baku.";
+            } catch (\Throwable $e) {
+                $_SESSION['flash_error'] = 'Impor data bahan baku gagal: ' . $e->getMessage();
+            }
         } else {
-            $_SESSION['flash_error'] = "File CSV tidak ditemukan atau gagal diunggah.";
+            $_SESSION['flash_error'] = "File Excel/CSV tidak ditemukan atau gagal diunggah.";
         }
         header('Location: /master/materials');
         exit;

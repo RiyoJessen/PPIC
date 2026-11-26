@@ -58,7 +58,7 @@ $currentRole = AccessControl::getCurrentRole();
                 <i class="fas fa-cube sidebar-menu-icon"></i>
                 <span>Data Finish Good</span>
             </a>
-            <a href="/master/boms" class="list-group-item list-group-item-action bg-transparent text-light <?= isActive('/master/boms', $currentUri) ?>">
+            <a href="/master/boms" class="list-group-item list-group-item-action bg-transparent text-light <?= (isActive('/master/boms', $currentUri) || isActive('/master/formulas', $currentUri)) ? 'active' : '' ?>">
                 <i class="fas fa-flask sidebar-menu-icon"></i>
                 <span>Data Formula</span>
             </a>

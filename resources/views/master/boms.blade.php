@@ -1,14 +1,14 @@
 @php
-$pageTitle = 'Formula & Bill of Materials (BOM)';
+$pageTitle = 'Data Formula Vaslina & BOM';
 @endphp
 @include('layouts.header')
 
 <div class="formula-page">
 <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
     <div>
-        <h3 class="fw-bold mb-1">Formula &amp; Bill of Materials</h3>
+        <h3 class="fw-bold mb-1">Data Formula</h3>
         <p class="formula-subtitle small mb-0">
-            Resep per produk, dikelompokkan per versi. Klik Detail untuk melihat komposisi lengkap.
+            Katalog formula dan variasi komposisi Vaslina berdasarkan data workbook, beserta BOM produksi.
         </p>
     </div>
     <div class="d-flex gap-2">
@@ -21,11 +21,92 @@ $pageTitle = 'Formula & Bill of Materials (BOM)';
     </div>
 </div>
 
-<div class="formula-toolbar mb-3">
-    <div class="formula-search">
-        <i class="fas fa-search" aria-hidden="true"></i>
-        <input type="search" id="bomSearch" class="form-control" placeholder="Cari produk atau kode" aria-label="Cari produk atau kode formula">
+<section class="formula-catalog-section mb-5" aria-labelledby="vaslinaCatalogTitle">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end gap-2 mb-3">
+        <div>
+            <h4 id="vaslinaCatalogTitle" class="fw-bold mb-1">Katalog Formula Vaslina</h4>
+            <p class="formula-subtitle small mb-0">
+                Tiap kode dapat memiliki beberapa varian. Nilai dari workbook dikonversi ke persen tanpa dinormalisasi.
+            </p>
+        </div>
+        <span class="formula-count" id="formulaCatalogCount"><?= count($formula_catalog ?? []) ?> varian formula</span>
     </div>
+    <div class="formula-toolbar mb-3">
+        <div class="formula-search">
+            <i class="fas fa-search" aria-hidden="true"></i>
+            <input type="search" id="formulaCatalogSearch" class="form-control" placeholder="Cari produk, kode, pelanggan, atau bahan" aria-label="Cari katalog formula Vaslina">
+        </div>
+    </div>
+    <div class="formula-table-wrap">
+        <div class="table-responsive">
+            <table class="table formula-table align-middle mb-0" id="formulaCatalogTable">
+                <thead>
+                    <tr>
+                        <th>Produk / Kode Formula</th>
+                        <th class="text-center">Jumlah bahan</th>
+                        <th class="text-end">Total komposisi</th>
+                        <th class="text-center">Produk / pelanggan</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (empty($formula_catalog)): ?>
+                        <tr><td colspan="5" class="formula-empty-state">Katalog formula Vaslina belum tersedia.</td></tr>
+                    <?php else: ?>
+                        <?php foreach ($formula_catalog as $formula): ?>
+                            <?php
+                            $totalPercentage = (float) $formula['total_fraction'] * 100;
+                            $compositionComplete = abs($totalPercentage - 100) <= 0.01;
+                            $searchText = $formula['product_name'] . ' ' . $formula['formula_code'];
+                            foreach ($formula['items'] as $item) {
+                                $searchText .= ' ' . $item['material_code'];
+                            }
+                            foreach ($formula['products'] as $product) {
+                                $searchText .= ' ' . $product['product_name'] . ' ' . $product['customer_name'] . ' ' . $product['nomat'];
+                            }
+                            ?>
+                            <tr class="formula-catalog-row" data-search="<?= htmlspecialchars(strtolower($searchText), ENT_QUOTES, 'UTF-8') ?>">
+                                <td>
+                                    <strong><?= htmlspecialchars($formula['product_name']) ?></strong>
+                                    <div>
+                                        <span class="formula-version-badge"><?= htmlspecialchars($formula['formula_code']) ?></span>
+                                        <?php if ($formula['formula_code'] === 'YB01'): ?>
+                                            <small class="formula-product-meta">Label sementara; kode formula tidak dicantumkan di workbook</small>
+                                        <?php endif; ?>
+                                    </div>
+                                </td>
+                                <td class="text-center"><?= count($formula['items']) ?></td>
+                                <td class="text-end">
+                                    <span class="formula-composition-label <?= $compositionComplete ? 'is-matched' : 'is-mismatch' ?>">
+                                        <?= number_format($totalPercentage, 4, ',', '.') ?>%
+                                    </span>
+                                </td>
+                                <td class="text-center"><?= count($formula['products']) ?></td>
+                                <td class="text-center">
+                                    <a class="formula-detail-button" href="/master/formulas/detail?id=<?= (int) $formula['id'] ?>&product_id=<?= (int) ($selected_product_id ?? 0) ?>">
+                                        Detail
+                                    </a>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                        <tr id="formulaCatalogNoResults" hidden>
+                            <td colspan="5" class="formula-empty-state">Tidak ada formula yang cocok dengan pencarian.</td>
+                        </tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end gap-2 mb-3">
+    <div>
+        <h4 class="fw-bold mb-1">BOM Produksi</h4>
+        <p class="formula-subtitle small mb-0">Formula BOM yang digunakan pada proses produksi sistem.</p>
+    </div>
+</div>
+
+<div class="formula-toolbar mb-3">
     <div class="formula-filters" role="group" aria-label="Filter status formula">
         <button type="button" class="formula-filter is-active" data-bom-filter="all" aria-pressed="true">Semua</button>
         <button type="button" class="formula-filter" data-bom-filter="active" aria-pressed="false">Aktif</button>
@@ -82,7 +163,7 @@ $currentProductId = null;
                         $isActive = (int) $b['is_active'] === 1;
                         $matchesBasis = abs($compositionTotal - $batchBasis) <= max(0.01, $batchBasis * 0.01);
                         ?>
-                        <tr class="bom-version-row" data-product-group="<?= (int) $b['product_id'] ?>" data-status="<?= $isActive ? 'active' : 'draft' ?>" data-details-id="bom-detail-<?= (int) $b['id'] ?>" data-search="<?= htmlspecialchars(strtolower($b['product_name'] . ' ' . $b['product_code']), ENT_QUOTES, 'UTF-8') ?>">
+                        <tr class="bom-version-row" data-product-group="<?= (int) $b['product_id'] ?>" data-status="<?= $isActive ? 'active' : 'draft' ?>" data-details-id="bom-detail-<?= (int) $b['id'] ?>">
                             <td>
                                 <span class="formula-version-badge"><?= htmlspecialchars($b['version']) ?></span>
                                 <span class="formula-status-badge <?= $isActive ? 'is-active' : 'is-draft' ?>"><?= $isActive ? 'Aktif' : 'Draf' ?></span>
@@ -159,9 +240,32 @@ $currentProductId = null;
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+    const catalogTable = document.getElementById('formulaCatalogTable');
+    const catalogSearch = document.getElementById('formulaCatalogSearch');
+    if (catalogTable && catalogSearch) {
+        const catalogCount = document.getElementById('formulaCatalogCount');
+        const catalogNoResults = document.getElementById('formulaCatalogNoResults');
+        const catalogRows = Array.from(catalogTable.querySelectorAll('.formula-catalog-row'));
+
+        function updateCatalogList() {
+            const query = catalogSearch.value.trim().toLowerCase();
+            let visibleCount = 0;
+
+            catalogRows.forEach(row => {
+                const matches = `${row.dataset.search || ''} ${row.textContent}`.toLowerCase().includes(query);
+                row.hidden = !matches;
+                if (matches) visibleCount++;
+            });
+
+            if (catalogNoResults) catalogNoResults.hidden = visibleCount > 0;
+            if (catalogCount) catalogCount.textContent = `${visibleCount} varian formula`;
+        }
+
+        catalogSearch.addEventListener('input', updateCatalogList);
+    }
+
     const table = document.getElementById('bomFormulaTable');
-    const searchInput = document.getElementById('bomSearch');
-    if (!table || !searchInput) return;
+    if (!table) return;
 
     const filterButtons = document.querySelectorAll('[data-bom-filter]');
     const countLabel = document.getElementById('bomCount');
@@ -169,15 +273,13 @@ document.addEventListener('DOMContentLoaded', () => {
     let activeFilter = 'all';
 
     function updateFormulaList() {
-        const query = searchInput.value.trim().toLowerCase();
         const formulaRows = Array.from(table.querySelectorAll('.bom-version-row'));
         let visibleCount = 0;
 
         formulaRows.forEach(row => {
             const matchesFilter = activeFilter === 'all' || row.dataset.status === activeFilter;
             const detailsRow = document.getElementById(row.dataset.detailsId);
-            const matchesSearch = `${row.dataset.search || ''} ${row.textContent} ${detailsRow?.textContent || ''}`.toLowerCase().includes(query);
-            row.hidden = !matchesFilter || !matchesSearch;
+            row.hidden = !matchesFilter;
             if (row.hidden && detailsRow) {
                 detailsRow.hidden = true;
                 const toggle = document.querySelector(`[data-bom-details-toggle="${row.dataset.detailsId}"]`);
@@ -202,7 +304,6 @@ document.addEventListener('DOMContentLoaded', () => {
         countLabel.textContent = `${visibleCount} versi formula`;
     }
 
-    searchInput.addEventListener('input', updateFormulaList);
     table.querySelectorAll('[data-bom-details-toggle]').forEach(button => {
         button.addEventListener('click', () => {
             const detailsRow = document.getElementById(button.dataset.bomDetailsToggle);
@@ -241,7 +342,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <select name="product_id" class="form-select form-select-sm" required>
                                 <option value="">-- Pilih Produk Jadi --</option>
                                 <?php foreach ($products as $prd): ?>
-                                    <option value="<?= $prd['id'] ?>"><?= htmlspecialchars($prd['code']) ?> - <?= htmlspecialchars($prd['name']) ?></option>
+                                    <option value="<?= $prd['id'] ?>" <?= (int) ($selected_product_id ?? 0) === (int) $prd['id'] ? 'selected' : '' ?>><?= htmlspecialchars($prd['code']) ?> - <?= htmlspecialchars($prd['name']) ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>

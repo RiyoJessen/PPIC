@@ -119,6 +119,7 @@ class Migration
             yield_pct REAL DEFAULT 100,
             scrap_pct REAL DEFAULT 0,
             is_active INTEGER DEFAULT 1,
+            source_formula_id INTEGER,
             notes TEXT,
             FOREIGN KEY (product_id) REFERENCES products(id)
         );
@@ -130,8 +131,34 @@ class Migration
             quantity_per_batch REAL NOT NULL,
             unit TEXT NOT NULL,
             notes TEXT,
+            source_formula_item_id INTEGER,
             FOREIGN KEY (bom_id) REFERENCES boms(id) ON DELETE CASCADE,
             FOREIGN KEY (material_id) REFERENCES materials(id)
+        );
+
+        CREATE TABLE IF NOT EXISTS formula_catalog (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            formula_code TEXT NOT NULL UNIQUE,
+            product_name TEXT NOT NULL,
+            source TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS formula_catalog_items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            formula_id INTEGER NOT NULL,
+            material_code TEXT NOT NULL,
+            fraction REAL NOT NULL,
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            FOREIGN KEY (formula_id) REFERENCES formula_catalog(id) ON DELETE CASCADE
+        );
+
+        CREATE TABLE IF NOT EXISTS formula_products (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            formula_id INTEGER NOT NULL,
+            customer_name TEXT NOT NULL DEFAULT '',
+            product_name TEXT NOT NULL,
+            nomat TEXT NOT NULL DEFAULT '',
+            FOREIGN KEY (formula_id) REFERENCES formula_catalog(id) ON DELETE CASCADE
         );
 
         CREATE TABLE IF NOT EXISTS inventory_batches (
@@ -278,6 +305,7 @@ SQL;
 
         Database::getConnection()->exec($schema);
         self::ensureMaterialSpecificationColumn();
+        self::ensureFormulaSourceColumns();
         self::ensureMaterialSuppliersTable();
         self::removeLegacyMaterialThresholdColumns();
         self::removeLegacyPurchasingSchema();
@@ -386,6 +414,7 @@ SQL;
             yield_pct DECIMAL(5,2) DEFAULT 100,
             scrap_pct DECIMAL(5,2) DEFAULT 0,
             is_active TINYINT DEFAULT 1,
+            source_formula_id INT NULL,
             notes TEXT,
             FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -397,8 +426,34 @@ SQL;
             quantity_per_batch DECIMAL(12,2) NOT NULL,
             unit VARCHAR(30) NOT NULL,
             notes VARCHAR(200),
+            source_formula_item_id INT NULL,
             FOREIGN KEY (bom_id) REFERENCES boms(id) ON DELETE CASCADE,
             FOREIGN KEY (material_id) REFERENCES materials(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+        CREATE TABLE IF NOT EXISTS formula_catalog (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            formula_code VARCHAR(100) NOT NULL UNIQUE,
+            product_name VARCHAR(200) NOT NULL,
+            source VARCHAR(150) NOT NULL
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+        CREATE TABLE IF NOT EXISTS formula_catalog_items (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            formula_id INT NOT NULL,
+            material_code VARCHAR(100) NOT NULL,
+            fraction DECIMAL(14,10) NOT NULL,
+            sort_order INT NOT NULL DEFAULT 0,
+            FOREIGN KEY (formula_id) REFERENCES formula_catalog(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+        CREATE TABLE IF NOT EXISTS formula_products (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            formula_id INT NOT NULL,
+            customer_name VARCHAR(180) NOT NULL DEFAULT '',
+            product_name VARCHAR(255) NOT NULL,
+            nomat VARCHAR(50) NOT NULL DEFAULT '',
+            FOREIGN KEY (formula_id) REFERENCES formula_catalog(id) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
         CREATE TABLE IF NOT EXISTS inventory_batches (
@@ -552,6 +607,7 @@ SQL;
             }
         }
         self::ensureMaterialSpecificationColumn();
+        self::ensureFormulaSourceColumns();
         self::ensureMaterialSuppliersTable();
         self::removeLegacyMaterialThresholdColumns();
         self::removeLegacyPurchasingSchema();
@@ -585,6 +641,44 @@ SQL;
         }
         if (!isset($existing['minimum_stock_note'])) {
             Database::statement('ALTER TABLE materials ADD COLUMN minimum_stock_note TEXT');
+        }
+    }
+
+    private static function ensureFormulaSourceColumns(): void
+    {
+        $columnsByTable = [
+            'boms' => ['source_formula_id' => 'INT NULL'],
+            'bom_items' => ['source_formula_item_id' => 'INT NULL'],
+        ];
+
+        if (AppConfig::getDbDriver() === 'mysql') {
+            foreach ($columnsByTable as $table => $columns) {
+                foreach ($columns as $name => $definition) {
+                    $existing = Database::selectOne("
+                        SELECT COUNT(*) AS column_count
+                        FROM information_schema.COLUMNS
+                        WHERE TABLE_SCHEMA = DATABASE()
+                          AND TABLE_NAME = :table_name
+                          AND COLUMN_NAME = :column_name
+                    ", ['table_name' => $table, 'column_name' => $name]);
+                    if ((int) ($existing['column_count'] ?? 0) === 0) {
+                        Database::statement("ALTER TABLE {$table} ADD COLUMN {$name} {$definition}");
+                    }
+                }
+            }
+            return;
+        }
+
+        foreach ($columnsByTable as $table => $columns) {
+            $existingColumns = array_fill_keys(
+                array_column(Database::select("PRAGMA table_info({$table})"), 'name'),
+                true
+            );
+            foreach ($columns as $name => $definition) {
+                if (!isset($existingColumns[$name])) {
+                    Database::statement("ALTER TABLE {$table} ADD COLUMN {$name} INTEGER");
+                }
+            }
         }
     }
 

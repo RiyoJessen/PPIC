@@ -1,0 +1,1929 @@
+{
+  "source": "Formulasi Vaslina.xlsx",
+  "formulas": [
+    {
+      "code": "3150 (1)",
+      "product": "Vaslina COP 3150",
+      "items": [
+        {
+          "material": "W445",
+          "fraction": 0.11,
+          "sort_order": 0
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.2,
+          "sort_order": 3
+        },
+        {
+          "material": "LP 30 CG Dazong",
+          "fraction": 0.69,
+          "sort_order": 11
+        }
+      ]
+    },
+    {
+      "code": "3150 (2)",
+      "product": "Vaslina COP 3150",
+      "items": [
+        {
+          "material": "W7545",
+          "fraction": 0.13,
+          "sort_order": 2
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.215,
+          "sort_order": 3
+        },
+        {
+          "material": "LP 30 CG Dazong",
+          "fraction": 0.655,
+          "sort_order": 11
+        }
+      ]
+    },
+    {
+      "code": "3150 (3)",
+      "product": "Vaslina COP 3150",
+      "items": [
+        {
+          "material": "W445",
+          "fraction": 0.11,
+          "sort_order": 0
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.11,
+          "sort_order": 3
+        },
+        {
+          "material": "SR 60",
+          "fraction": 0.09,
+          "sort_order": 4
+        },
+        {
+          "material": "LP 30 CG Dazong",
+          "fraction": 0.69,
+          "sort_order": 11
+        }
+      ]
+    },
+    {
+      "code": "3150 (4)",
+      "product": "Vaslina COP 3150",
+      "items": [
+        {
+          "material": "SASOL WAX",
+          "fraction": 0.11,
+          "sort_order": 1
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.21,
+          "sort_order": 3
+        },
+        {
+          "material": "LP 30 CG Dazong",
+          "fraction": 0.68,
+          "sort_order": 11
+        }
+      ]
+    },
+    {
+      "code": "3150 HJ (1)",
+      "product": "Vaslina COP 3150 HJ",
+      "items": [
+        {
+          "material": "W445",
+          "fraction": 0.1,
+          "sort_order": 0
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.21,
+          "sort_order": 3
+        },
+        {
+          "material": "LP 30 CG Dazong",
+          "fraction": 0.69,
+          "sort_order": 11
+        }
+      ]
+    },
+    {
+      "code": "3150 HJ (2)",
+      "product": "Vaslina COP 3150 HJ",
+      "items": [
+        {
+          "material": "W7545",
+          "fraction": 0.12,
+          "sort_order": 2
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.215,
+          "sort_order": 3
+        },
+        {
+          "material": "LP 30 CG Dazong",
+          "fraction": 0.665,
+          "sort_order": 11
+        }
+      ]
+    },
+    {
+      "code": "3150 HJ (3)",
+      "product": "Vaslina COP 3150 HJ",
+      "items": [
+        {
+          "material": "W445",
+          "fraction": 0.1,
+          "sort_order": 0
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.13,
+          "sort_order": 3
+        },
+        {
+          "material": "SR 60",
+          "fraction": 0.08,
+          "sort_order": 4
+        },
+        {
+          "material": "LP 30 CG Dazong",
+          "fraction": 0.69,
+          "sort_order": 11
+        }
+      ]
+    },
+    {
+      "code": "3150 HJ (4)",
+      "product": "Vaslina COP 3150 HJ",
+      "items": [
+        {
+          "material": "SASOL WAX",
+          "fraction": 0.1,
+          "sort_order": 1
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.22,
+          "sort_order": 3
+        },
+        {
+          "material": "LP 30 CG Dazong",
+          "fraction": 0.68,
+          "sort_order": 11
+        }
+      ]
+    },
+    {
+      "code": "V Album (1)",
+      "product": "Vaselinum Album",
+      "items": [
+        {
+          "material": "W445",
+          "fraction": 0.1,
+          "sort_order": 0
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.19,
+          "sort_order": 3
+        },
+        {
+          "material": "LP 30 CG Dazong",
+          "fraction": 0.71,
+          "sort_order": 11
+        }
+      ]
+    },
+    {
+      "code": "V Album (2)",
+      "product": "Vaselinum Album",
+      "items": [
+        {
+          "material": "W7545",
+          "fraction": 0.12,
+          "sort_order": 2
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.2,
+          "sort_order": 3
+        },
+        {
+          "material": "LP 30 CG Dazong",
+          "fraction": 0.68,
+          "sort_order": 11
+        }
+      ]
+    },
+    {
+      "code": "V Album (3)",
+      "product": "Vaselinum Album",
+      "items": [
+        {
+          "material": "W445",
+          "fraction": 0.1,
+          "sort_order": 0
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.1,
+          "sort_order": 3
+        },
+        {
+          "material": "SR 60",
+          "fraction": 0.09,
+          "sort_order": 4
+        },
+        {
+          "material": "LP 30 CG Dazong",
+          "fraction": 0.71,
+          "sort_order": 11
+        }
+      ]
+    },
+    {
+      "code": "V Album (4)",
+      "product": "Vaselinum Album",
+      "items": [
+        {
+          "material": "SASOL WAX",
+          "fraction": 0.1,
+          "sort_order": 1
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.2,
+          "sort_order": 3
+        },
+        {
+          "material": "LP 30 CG Dazong",
+          "fraction": 0.7,
+          "sort_order": 11
+        }
+      ]
+    },
+    {
+      "code": "3151 (1)",
+      "product": "Vaslina COP 3151",
+      "items": [
+        {
+          "material": "W445",
+          "fraction": 0.1,
+          "sort_order": 0
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.145,
+          "sort_order": 3
+        },
+        {
+          "material": "LP 30 CG Dazong",
+          "fraction": 0.755,
+          "sort_order": 11
+        }
+      ]
+    },
+    {
+      "code": "3151 (2)",
+      "product": "Vaslina COP 3151",
+      "items": [
+        {
+          "material": "W445",
+          "fraction": 0.1,
+          "sort_order": 0
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.085,
+          "sort_order": 3
+        },
+        {
+          "material": "SR 60",
+          "fraction": 0.06,
+          "sort_order": 4
+        },
+        {
+          "material": "LP 30 CG Dazong",
+          "fraction": 0.755,
+          "sort_order": 11
+        }
+      ]
+    },
+    {
+      "code": "3151 (3)",
+      "product": "Vaslina COP 3151",
+      "items": [
+        {
+          "material": "SASOL WAX",
+          "fraction": 0.1,
+          "sort_order": 1
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.16,
+          "sort_order": 3
+        },
+        {
+          "material": "LP 30 CG Dazong",
+          "fraction": 0.74,
+          "sort_order": 11
+        }
+      ]
+    },
+    {
+      "code": "500T (1)",
+      "product": "Vaslina 500T",
+      "items": [
+        {
+          "material": "W445",
+          "fraction": 0.165,
+          "sort_order": 0
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.215,
+          "sort_order": 3
+        },
+        {
+          "material": "LMO",
+          "fraction": 0.018,
+          "sort_order": 5
+        },
+        {
+          "material": "LP 30 CG Dazong",
+          "fraction": 0.508,
+          "sort_order": 11
+        },
+        {
+          "material": "LP 13 CG",
+          "fraction": 0.094,
+          "sort_order": 13
+        }
+      ]
+    },
+    {
+      "code": "500T (2)",
+      "product": "Vaslina 500T",
+      "items": [
+        {
+          "material": "W7545",
+          "fraction": 0.185,
+          "sort_order": 2
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.23,
+          "sort_order": 3
+        },
+        {
+          "material": "LMO",
+          "fraction": 0.018,
+          "sort_order": 5
+        },
+        {
+          "material": "LP 30 CG Dazong",
+          "fraction": 0.473,
+          "sort_order": 11
+        },
+        {
+          "material": "LP 13 CG",
+          "fraction": 0.094,
+          "sort_order": 13
+        }
+      ]
+    },
+    {
+      "code": "500T (3)",
+      "product": "Vaslina 500T",
+      "items": [
+        {
+          "material": "W445",
+          "fraction": 0.165,
+          "sort_order": 0
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.125,
+          "sort_order": 3
+        },
+        {
+          "material": "SR 60",
+          "fraction": 0.09,
+          "sort_order": 4
+        },
+        {
+          "material": "LMO",
+          "fraction": 0.018,
+          "sort_order": 5
+        },
+        {
+          "material": "LP 30 CG Dazong",
+          "fraction": 0.508,
+          "sort_order": 11
+        },
+        {
+          "material": "LP 13 CG",
+          "fraction": 0.094,
+          "sort_order": 13
+        }
+      ]
+    },
+    {
+      "code": "500T (4)",
+      "product": "Vaslina 500T",
+      "items": [
+        {
+          "material": "SASOL WAX",
+          "fraction": 0.175,
+          "sort_order": 1
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.215,
+          "sort_order": 3
+        },
+        {
+          "material": "LMO",
+          "fraction": 0.018,
+          "sort_order": 5
+        },
+        {
+          "material": "LP 30 CG Dazong",
+          "fraction": 0.498,
+          "sort_order": 11
+        },
+        {
+          "material": "LP 13 CG",
+          "fraction": 0.094,
+          "sort_order": 13
+        }
+      ]
+    },
+    {
+      "code": "680M (1)",
+      "product": "Vaslina 680M",
+      "items": [
+        {
+          "material": "W445",
+          "fraction": 0.175,
+          "sort_order": 0
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.215,
+          "sort_order": 3
+        },
+        {
+          "material": "LP 30 CG Dazong",
+          "fraction": 0.61,
+          "sort_order": 11
+        }
+      ]
+    },
+    {
+      "code": "680M (2)",
+      "product": "Vaslina 680M",
+      "items": [
+        {
+          "material": "W7545",
+          "fraction": 0.2,
+          "sort_order": 2
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.2,
+          "sort_order": 3
+        },
+        {
+          "material": "LP 30 CG Dazong",
+          "fraction": 0.6,
+          "sort_order": 11
+        }
+      ]
+    },
+    {
+      "code": "680M (3)",
+      "product": "Vaslina 680M",
+      "items": [
+        {
+          "material": "W445",
+          "fraction": 0.175,
+          "sort_order": 0
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.125,
+          "sort_order": 3
+        },
+        {
+          "material": "SR 60",
+          "fraction": 0.09,
+          "sort_order": 4
+        },
+        {
+          "material": "LP 30 CG Dazong",
+          "fraction": 0.61,
+          "sort_order": 11
+        }
+      ]
+    },
+    {
+      "code": "680M (4)",
+      "product": "Vaslina 680M",
+      "items": [
+        {
+          "material": "SASOL WAX",
+          "fraction": 0.175,
+          "sort_order": 1
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.21,
+          "sort_order": 3
+        },
+        {
+          "material": "LP 30 CG Dazong",
+          "fraction": 0.615,
+          "sort_order": 11
+        }
+      ]
+    },
+    {
+      "code": "W150 (1)",
+      "product": "Vaslina W150",
+      "items": [
+        {
+          "material": "W445",
+          "fraction": 0.1,
+          "sort_order": 0
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.2,
+          "sort_order": 3
+        },
+        {
+          "material": "LP 30 CG Dazong",
+          "fraction": 0.7,
+          "sort_order": 11
+        }
+      ]
+    },
+    {
+      "code": "W150 (2)",
+      "product": "Vaslina W150",
+      "items": [
+        {
+          "material": "W7545",
+          "fraction": 0.115,
+          "sort_order": 2
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.2,
+          "sort_order": 3
+        },
+        {
+          "material": "LP 30 CG Dazong",
+          "fraction": 0.685,
+          "sort_order": 11
+        }
+      ]
+    },
+    {
+      "code": "W150 (3)",
+      "product": "Vaslina W150",
+      "items": [
+        {
+          "material": "W445",
+          "fraction": 0.1,
+          "sort_order": 0
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.11,
+          "sort_order": 3
+        },
+        {
+          "material": "SR 60",
+          "fraction": 0.09,
+          "sort_order": 4
+        },
+        {
+          "material": "LP 30 CG Dazong",
+          "fraction": 0.7,
+          "sort_order": 11
+        }
+      ]
+    },
+    {
+      "code": "W150 (4)",
+      "product": "Vaslina W150",
+      "items": [
+        {
+          "material": "SASOL WAX",
+          "fraction": 0.1,
+          "sort_order": 1
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.2,
+          "sort_order": 3
+        },
+        {
+          "material": "LP 30 CG Dazong",
+          "fraction": 0.7,
+          "sort_order": 11
+        }
+      ]
+    },
+    {
+      "code": "720P (1)",
+      "product": "VASLINA 720 P",
+      "items": [
+        {
+          "material": "W445",
+          "fraction": 0.15,
+          "sort_order": 0
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.13,
+          "sort_order": 3
+        },
+        {
+          "material": "LP 100 FG",
+          "fraction": 0.72,
+          "sort_order": 14
+        }
+      ]
+    },
+    {
+      "code": "720P (2)",
+      "product": "VASLINA 720 P",
+      "items": [
+        {
+          "material": "W7545",
+          "fraction": 0.17,
+          "sort_order": 2
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.11,
+          "sort_order": 3
+        },
+        {
+          "material": "LP 100 FG",
+          "fraction": 0.72,
+          "sort_order": 14
+        }
+      ]
+    },
+    {
+      "code": "720P (3)",
+      "product": "VASLINA 720 P",
+      "items": [
+        {
+          "material": "W445",
+          "fraction": 0.15,
+          "sort_order": 0
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.08,
+          "sort_order": 3
+        },
+        {
+          "material": "SR 60",
+          "fraction": 0.05,
+          "sort_order": 4
+        },
+        {
+          "material": "LP 100 FG",
+          "fraction": 0.72,
+          "sort_order": 14
+        }
+      ]
+    },
+    {
+      "code": "720P (4)",
+      "product": "VASLINA 720 P",
+      "items": [
+        {
+          "material": "SASOL WAX",
+          "fraction": 0.15,
+          "sort_order": 1
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.14,
+          "sort_order": 3
+        },
+        {
+          "material": "LP 100 FG",
+          "fraction": 0.71,
+          "sort_order": 14
+        }
+      ]
+    },
+    {
+      "code": "L1125 (1)",
+      "product": "VASLINA L1125/ LITA 02",
+      "items": [
+        {
+          "material": "W445",
+          "fraction": 0.09,
+          "sort_order": 0
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.125,
+          "sort_order": 3
+        },
+        {
+          "material": "LMO",
+          "fraction": 0.13,
+          "sort_order": 5
+        },
+        {
+          "material": "LP 13 CG",
+          "fraction": 0.655,
+          "sort_order": 13
+        }
+      ]
+    },
+    {
+      "code": "L1125 (2)",
+      "product": "VASLINA L1125/ LITA 02",
+      "items": [
+        {
+          "material": "W7545",
+          "fraction": 0.1,
+          "sort_order": 2
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.13,
+          "sort_order": 3
+        },
+        {
+          "material": "LMO",
+          "fraction": 0.13,
+          "sort_order": 5
+        },
+        {
+          "material": "LP 13 CG",
+          "fraction": 0.64,
+          "sort_order": 13
+        }
+      ]
+    },
+    {
+      "code": "L1125 (3)",
+      "product": "VASLINA L1125/ LITA 02",
+      "items": [
+        {
+          "material": "W445",
+          "fraction": 0.09,
+          "sort_order": 0
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.075,
+          "sort_order": 3
+        },
+        {
+          "material": "SR 60",
+          "fraction": 0.05,
+          "sort_order": 4
+        },
+        {
+          "material": "LMO",
+          "fraction": 0.13,
+          "sort_order": 5
+        },
+        {
+          "material": "LP 13 CG",
+          "fraction": 0.655,
+          "sort_order": 13
+        }
+      ]
+    },
+    {
+      "code": "L1125 (4)",
+      "product": "VASLINA L1125/ LITA 02",
+      "items": [
+        {
+          "material": "SASOL WAX",
+          "fraction": 0.09,
+          "sort_order": 1
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.125,
+          "sort_order": 3
+        },
+        {
+          "material": "LMO",
+          "fraction": 0.13,
+          "sort_order": 5
+        },
+        {
+          "material": "LP 13 CG",
+          "fraction": 0.655,
+          "sort_order": 13
+        }
+      ]
+    },
+    {
+      "code": "905E (1)",
+      "product": "Vaslina 905 E",
+      "items": [
+        {
+          "material": "W445",
+          "fraction": 0.05,
+          "sort_order": 0
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.05,
+          "sort_order": 3
+        },
+        {
+          "material": "LP 30 CG Dazong",
+          "fraction": 0.9,
+          "sort_order": 11
+        }
+      ]
+    },
+    {
+      "code": "905E (2)",
+      "product": "Vaslina 905 E",
+      "items": [
+        {
+          "material": "W7545",
+          "fraction": 0.05,
+          "sort_order": 2
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.05,
+          "sort_order": 3
+        },
+        {
+          "material": "LP 30 CG Dazong",
+          "fraction": 0.9,
+          "sort_order": 11
+        }
+      ]
+    },
+    {
+      "code": "905E (3)",
+      "product": "Vaslina 905 E",
+      "items": [
+        {
+          "material": "W445",
+          "fraction": 0.05,
+          "sort_order": 0
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.025,
+          "sort_order": 3
+        },
+        {
+          "material": "SR 60",
+          "fraction": 0.025,
+          "sort_order": 4
+        },
+        {
+          "material": "LP 30 CG Dazong",
+          "fraction": 0.9,
+          "sort_order": 11
+        }
+      ]
+    },
+    {
+      "code": "905E (4)",
+      "product": "Vaslina 905 E",
+      "items": [
+        {
+          "material": "SASOL WAX",
+          "fraction": 0.05,
+          "sort_order": 1
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.05,
+          "sort_order": 3
+        },
+        {
+          "material": "LP 30 CG Dazong",
+          "fraction": 0.9,
+          "sort_order": 11
+        }
+      ]
+    },
+    {
+      "code": "SP120 (1)",
+      "product": "Vaslina SP 120",
+      "items": [
+        {
+          "material": "W445",
+          "fraction": 0.13,
+          "sort_order": 0
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.18,
+          "sort_order": 3
+        },
+        {
+          "material": "Serat Panjang",
+          "fraction": 0.005,
+          "sort_order": 9
+        },
+        {
+          "material": "LP 30 CG Dazong",
+          "fraction": 0.685,
+          "sort_order": 11
+        }
+      ]
+    },
+    {
+      "code": "SP120 (2)",
+      "product": "Vaslina SP 120",
+      "items": [
+        {
+          "material": "W7545",
+          "fraction": 0.14,
+          "sort_order": 2
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.19,
+          "sort_order": 3
+        },
+        {
+          "material": "Serat Panjang",
+          "fraction": 0.005,
+          "sort_order": 9
+        },
+        {
+          "material": "LP 30 CG Dazong",
+          "fraction": 0.665,
+          "sort_order": 11
+        }
+      ]
+    },
+    {
+      "code": "SP120 (3)",
+      "product": "Vaslina SP 120",
+      "items": [
+        {
+          "material": "W445",
+          "fraction": 0.13,
+          "sort_order": 0
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.1,
+          "sort_order": 3
+        },
+        {
+          "material": "SR 60",
+          "fraction": 0.09,
+          "sort_order": 4
+        },
+        {
+          "material": "Serat Panjang",
+          "fraction": 0.005,
+          "sort_order": 9
+        },
+        {
+          "material": "LP 30 CG Dazong",
+          "fraction": 0.675,
+          "sort_order": 11
+        }
+      ]
+    },
+    {
+      "code": "SP120 (4)",
+      "product": "Vaslina SP 120",
+      "items": [
+        {
+          "material": "SASOL WAX",
+          "fraction": 0.13,
+          "sort_order": 1
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.18,
+          "sort_order": 3
+        },
+        {
+          "material": "Serat Panjang",
+          "fraction": 0.005,
+          "sort_order": 9
+        },
+        {
+          "material": "LP 30 CG Dazong",
+          "fraction": 0.685,
+          "sort_order": 11
+        }
+      ]
+    },
+    {
+      "code": "550L (1)",
+      "product": "Vaslina 550L",
+      "items": [
+        {
+          "material": "W445",
+          "fraction": 0.2,
+          "sort_order": 0
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.21,
+          "sort_order": 3
+        },
+        {
+          "material": "LP 30 CG Dazong",
+          "fraction": 0.59,
+          "sort_order": 11
+        }
+      ]
+    },
+    {
+      "code": "550L (2)",
+      "product": "Vaslina 550L",
+      "items": [
+        {
+          "material": "W7545",
+          "fraction": 0.21,
+          "sort_order": 2
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.25,
+          "sort_order": 3
+        },
+        {
+          "material": "LP 30 CG Dazong",
+          "fraction": 0.54,
+          "sort_order": 11
+        }
+      ]
+    },
+    {
+      "code": "550L (3)",
+      "product": "Vaslina 550L",
+      "items": [
+        {
+          "material": "W445",
+          "fraction": 0.2,
+          "sort_order": 0
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.13,
+          "sort_order": 3
+        },
+        {
+          "material": "SR 60",
+          "fraction": 0.11,
+          "sort_order": 4
+        },
+        {
+          "material": "LP 30 CG Dazong",
+          "fraction": 0.56,
+          "sort_order": 11
+        }
+      ]
+    },
+    {
+      "code": "550L (4)",
+      "product": "Vaslina 550L",
+      "items": [
+        {
+          "material": "SASOL WAX",
+          "fraction": 0.2,
+          "sort_order": 1
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.24,
+          "sort_order": 3
+        },
+        {
+          "material": "LP 30 CG Dazong",
+          "fraction": 0.56,
+          "sort_order": 11
+        }
+      ]
+    },
+    {
+      "code": "L1125 (II) (1)",
+      "product": "Vaslina L1125 (II)",
+      "items": [
+        {
+          "material": "W445",
+          "fraction": 0.09,
+          "sort_order": 0
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.125,
+          "sort_order": 3
+        },
+        {
+          "material": "LMO",
+          "fraction": 0.1,
+          "sort_order": 5
+        },
+        {
+          "material": "DAO",
+          "fraction": 0.05,
+          "sort_order": 7
+        },
+        {
+          "material": "Spent LMO",
+          "fraction": 0.12,
+          "sort_order": 10
+        },
+        {
+          "material": "LP 13 CG",
+          "fraction": 0.515,
+          "sort_order": 13
+        }
+      ]
+    },
+    {
+      "code": "L1125 (II) (2)",
+      "product": "Vaslina L1125 (II)",
+      "items": [
+        {
+          "material": "W445",
+          "fraction": 0.09,
+          "sort_order": 0
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.16,
+          "sort_order": 3
+        },
+        {
+          "material": "LMO",
+          "fraction": 0.17,
+          "sort_order": 5
+        },
+        {
+          "material": "DAO",
+          "fraction": 0.06,
+          "sort_order": 7
+        },
+        {
+          "material": "Prowax 660",
+          "fraction": 0.02,
+          "sort_order": 8
+        },
+        {
+          "material": "LP 13 CG",
+          "fraction": 0.39,
+          "sort_order": 13
+        },
+        {
+          "material": "S225",
+          "fraction": 0.11,
+          "sort_order": 15
+        }
+      ]
+    },
+    {
+      "code": "L1125 (II) (3)",
+      "product": "Vaslina L1125 (II)",
+      "items": [
+        {
+          "material": "W7545",
+          "fraction": 0.1,
+          "sort_order": 2
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.15,
+          "sort_order": 3
+        },
+        {
+          "material": "LMO",
+          "fraction": 0.16,
+          "sort_order": 5
+        },
+        {
+          "material": "DAO",
+          "fraction": 0.06,
+          "sort_order": 7
+        },
+        {
+          "material": "Prowax 660",
+          "fraction": 0.02,
+          "sort_order": 8
+        },
+        {
+          "material": "LP 13 CG",
+          "fraction": 0.4,
+          "sort_order": 13
+        },
+        {
+          "material": "S225",
+          "fraction": 0.11,
+          "sort_order": 15
+        }
+      ]
+    },
+    {
+      "code": "L1125 (II) (4)",
+      "product": "Vaslina L1125 (II)",
+      "items": [
+        {
+          "material": "W445",
+          "fraction": 0.09,
+          "sort_order": 0
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.11,
+          "sort_order": 3
+        },
+        {
+          "material": "LMO",
+          "fraction": 0.21,
+          "sort_order": 5
+        },
+        {
+          "material": "DAO",
+          "fraction": 0.06,
+          "sort_order": 7
+        },
+        {
+          "material": "Prowax 660",
+          "fraction": 0.02,
+          "sort_order": 8
+        },
+        {
+          "material": "LP 13 CG",
+          "fraction": 0.34,
+          "sort_order": 13
+        },
+        {
+          "material": "S832",
+          "fraction": 0.17,
+          "sort_order": 16
+        }
+      ]
+    },
+    {
+      "code": "L1125 (II) (5)",
+      "product": "Vaslina L1125 (II)",
+      "items": [
+        {
+          "material": "W445",
+          "fraction": 0.09,
+          "sort_order": 0
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.06,
+          "sort_order": 3
+        },
+        {
+          "material": "SR 60",
+          "fraction": 0.05,
+          "sort_order": 4
+        },
+        {
+          "material": "LMO",
+          "fraction": 0.21,
+          "sort_order": 5
+        },
+        {
+          "material": "DAO",
+          "fraction": 0.06,
+          "sort_order": 7
+        },
+        {
+          "material": "Prowax 660",
+          "fraction": 0.02,
+          "sort_order": 8
+        },
+        {
+          "material": "LP 13 CG",
+          "fraction": 0.34,
+          "sort_order": 13
+        },
+        {
+          "material": "S832",
+          "fraction": 0.17,
+          "sort_order": 16
+        }
+      ]
+    },
+    {
+      "code": "L1125 (II) (6)",
+      "product": "Vaslina L1125 (II)",
+      "items": [
+        {
+          "material": "W445",
+          "fraction": 0.09,
+          "sort_order": 0
+        },
+        {
+          "material": "SR 60",
+          "fraction": 0.06,
+          "sort_order": 4
+        },
+        {
+          "material": "LMO",
+          "fraction": 0.25,
+          "sort_order": 5
+        },
+        {
+          "material": "DAO",
+          "fraction": 0.06,
+          "sort_order": 7
+        },
+        {
+          "material": "LP 13 CG",
+          "fraction": 0.27,
+          "sort_order": 13
+        },
+        {
+          "material": "PO10",
+          "fraction": 0.15,
+          "sort_order": 17
+        },
+        {
+          "material": "SN250",
+          "fraction": 0.12,
+          "sort_order": 18
+        }
+      ]
+    },
+    {
+      "code": "L1125 (II) (7)",
+      "product": "Vaslina L1125 (II)",
+      "items": [
+        {
+          "material": "SASOL WAX",
+          "fraction": 0.09,
+          "sort_order": 1
+        },
+        {
+          "material": "SR 60",
+          "fraction": 0.06,
+          "sort_order": 4
+        },
+        {
+          "material": "LMO",
+          "fraction": 0.25,
+          "sort_order": 5
+        },
+        {
+          "material": "DAO",
+          "fraction": 0.06,
+          "sort_order": 7
+        },
+        {
+          "material": "LP 13 CG",
+          "fraction": 0.27,
+          "sort_order": 13
+        },
+        {
+          "material": "PO10",
+          "fraction": 0.15,
+          "sort_order": 17
+        },
+        {
+          "material": "SN250",
+          "fraction": 0.12,
+          "sort_order": 18
+        }
+      ]
+    },
+    {
+      "code": "3151 (I) (1)",
+      "product": "Vaslina 3151 (I)",
+      "items": [
+        {
+          "material": "W445",
+          "fraction": 0.1,
+          "sort_order": 0
+        },
+        {
+          "material": "LMO Press",
+          "fraction": 0.2,
+          "sort_order": 6
+        },
+        {
+          "material": "LP 30 TG Shell",
+          "fraction": 0.7,
+          "sort_order": 12
+        }
+      ]
+    },
+    {
+      "code": "3151 (I) (2)",
+      "product": "Vaslina 3151 (I)",
+      "items": [
+        {
+          "material": "W445",
+          "fraction": 0.1,
+          "sort_order": 0
+        },
+        {
+          "material": "SR 60",
+          "fraction": 0.05,
+          "sort_order": 4
+        },
+        {
+          "material": "LMO",
+          "fraction": 0.15,
+          "sort_order": 5
+        },
+        {
+          "material": "LP 30 TG Shell",
+          "fraction": 0.7,
+          "sort_order": 12
+        }
+      ]
+    },
+    {
+      "code": "3151 (I) (3)",
+      "product": "Vaslina 3151 (I)",
+      "items": [
+        {
+          "material": "W7545",
+          "fraction": 0.12,
+          "sort_order": 2
+        },
+        {
+          "material": "LMO Press",
+          "fraction": 0.195,
+          "sort_order": 6
+        },
+        {
+          "material": "LP 30 TG Shell",
+          "fraction": 0.685,
+          "sort_order": 12
+        }
+      ]
+    },
+    {
+      "code": "3151 (I) (4)",
+      "product": "Vaslina 3151 (I)",
+      "items": [
+        {
+          "material": "W7545",
+          "fraction": 0.12,
+          "sort_order": 2
+        },
+        {
+          "material": "SR 60",
+          "fraction": 0.045,
+          "sort_order": 4
+        },
+        {
+          "material": "LMO",
+          "fraction": 0.15,
+          "sort_order": 5
+        },
+        {
+          "material": "LP 30 TG Shell",
+          "fraction": 0.685,
+          "sort_order": 12
+        }
+      ]
+    },
+    {
+      "code": "3151 (I) (5)",
+      "product": "Vaslina 3151 (I)",
+      "items": [
+        {
+          "material": "SASOL WAX",
+          "fraction": 0.05,
+          "sort_order": 1
+        },
+        {
+          "material": "SR 60",
+          "fraction": 0.1,
+          "sort_order": 4
+        },
+        {
+          "material": "DAO",
+          "fraction": 0.05,
+          "sort_order": 7
+        },
+        {
+          "material": "LP 10",
+          "fraction": 0.28,
+          "sort_order": 20
+        },
+        {
+          "material": "LP 26",
+          "fraction": 0.42,
+          "sort_order": 21
+        },
+        {
+          "material": "SR (static)",
+          "fraction": 0.1,
+          "sort_order": 22
+        }
+      ]
+    },
+    {
+      "code": "3153 (1)",
+      "product": "Vaslina COP 3153",
+      "items": [
+        {
+          "material": "W445",
+          "fraction": 0.1,
+          "sort_order": 0
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.16,
+          "sort_order": 3
+        },
+        {
+          "material": "LP 30 CG Dazong",
+          "fraction": 0.74,
+          "sort_order": 11
+        }
+      ]
+    },
+    {
+      "code": "3153 (2)",
+      "product": "Vaslina COP 3153",
+      "items": [
+        {
+          "material": "W445",
+          "fraction": 0.1,
+          "sort_order": 0
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.09,
+          "sort_order": 3
+        },
+        {
+          "material": "SR 60",
+          "fraction": 0.07,
+          "sort_order": 4
+        },
+        {
+          "material": "LP 30 CG Dazong",
+          "fraction": 0.74,
+          "sort_order": 11
+        }
+      ]
+    },
+    {
+      "code": "3153 (3)",
+      "product": "Vaslina COP 3153",
+      "items": [
+        {
+          "material": "SASOL WAX",
+          "fraction": 0.1,
+          "sort_order": 1
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.17,
+          "sort_order": 3
+        },
+        {
+          "material": "LP 30 CG Dazong",
+          "fraction": 0.73,
+          "sort_order": 11
+        }
+      ]
+    },
+    {
+      "code": "3152P (1)",
+      "product": "Vaslina COP 3152P",
+      "items": [
+        {
+          "material": "W445",
+          "fraction": 0.12,
+          "sort_order": 0
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.23,
+          "sort_order": 3
+        },
+        {
+          "material": "LP 30 CG Dazong",
+          "fraction": 0.65,
+          "sort_order": 11
+        }
+      ]
+    },
+    {
+      "code": "3152P (2)",
+      "product": "Vaslina COP 3152P",
+      "items": [
+        {
+          "material": "W445",
+          "fraction": 0.12,
+          "sort_order": 0
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.13,
+          "sort_order": 3
+        },
+        {
+          "material": "SR 60",
+          "fraction": 0.1,
+          "sort_order": 4
+        },
+        {
+          "material": "LP 30 CG Dazong",
+          "fraction": 0.65,
+          "sort_order": 11
+        }
+      ]
+    },
+    {
+      "code": "3152P (3)",
+      "product": "Vaslina COP 3152P",
+      "items": [
+        {
+          "material": "SASOL WAX",
+          "fraction": 0.12,
+          "sort_order": 1
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.24,
+          "sort_order": 3
+        },
+        {
+          "material": "LP 30 CG Dazong",
+          "fraction": 0.64,
+          "sort_order": 11
+        }
+      ]
+    },
+    {
+      "code": "MC70",
+      "product": "Parawx MC 70",
+      "items": [
+        {
+          "material": "SASOL WAX",
+          "fraction": 1.0,
+          "sort_order": 1
+        }
+      ]
+    },
+    {
+      "code": "WPW70",
+      "product": "White Parawax 70",
+      "items": [
+        {
+          "material": "SASOL WAX",
+          "fraction": 0.05,
+          "sort_order": 1
+        }
+      ]
+    },
+    {
+      "code": "YB01",
+      "product": "VASLINA YB01",
+      "items": [
+        {
+          "material": "W445",
+          "fraction": 0.09,
+          "sort_order": 0
+        },
+        {
+          "material": "FR 60",
+          "fraction": 0.11,
+          "sort_order": 3
+        },
+        {
+          "material": "LMO",
+          "fraction": 0.21,
+          "sort_order": 5
+        },
+        {
+          "material": "DAO",
+          "fraction": 0.06,
+          "sort_order": 7
+        },
+        {
+          "material": "Prowax 660",
+          "fraction": 0.02,
+          "sort_order": 8
+        },
+        {
+          "material": "LP 13 CG",
+          "fraction": 0.34,
+          "sort_order": 13
+        },
+        {
+          "material": "S832",
+          "fraction": 0.17,
+          "sort_order": 16
+        },
+        {
+          "material": "Colorant",
+          "fraction": 1.12e-05,
+          "sort_order": 17
+        }
+      ]
+    }
+  ],
+  "assignments": [
+    {
+      "customer": "EGLIN",
+      "product": "Vaslina 680 M / VASLINA RM68015",
+      "nomat": "1100019501",
+      "formula_code": "680M (4)"
+    },
+    {
+      "customer": "TEMPO GROUP",
+      "product": "Vaslina COP 3151 / VASLINA RC315115",
+      "nomat": "1100011774",
+      "formula_code": "3151 (3)"
+    },
+    {
+      "customer": "IRAWAN DJAJA",
+      "product": "Vaslinum Album",
+      "nomat": "1100014404",
+      "formula_code": "V Album (4)"
+    },
+    {
+      "customer": "SEKAWAN KOSMETIK",
+      "product": "Vaslina COP 3150 / VASLINA RC315015",
+      "nomat": "1100013398",
+      "formula_code": "3150 (4)"
+    },
+    {
+      "customer": "MEGA SURYAMAS",
+      "product": "Vaslina COP 3150",
+      "nomat": "1100013398",
+      "formula_code": "3150 (4)"
+    },
+    {
+      "customer": "HAYJEN",
+      "product": "Vaslina COP 3150 HJ",
+      "nomat": "1100012893",
+      "formula_code": "3150 HJ (4)"
+    },
+    {
+      "customer": "AW",
+      "product": "VASLINA RC315022",
+      "nomat": "1100011795",
+      "formula_code": "3150 (4)"
+    },
+    {
+      "customer": "UNIFINE",
+      "product": "VASLINA RC315022",
+      "nomat": "1100012212",
+      "formula_code": "3150 (4)"
+    },
+    {
+      "customer": "KHARINDO PRAKARSA",
+      "product": "Vaslina COP 3150",
+      "nomat": "1100003560",
+      "formula_code": "3150 (4)"
+    },
+    {
+      "customer": "DRAGON PRIMA FARMA",
+      "product": "Vaslina COP 3150",
+      "nomat": "1100003560",
+      "formula_code": "3150 (4)"
+    },
+    {
+      "customer": "MEDIKON",
+      "product": "Vaslina COP 3150",
+      "nomat": "1100003560",
+      "formula_code": "3150 (4)"
+    },
+    {
+      "customer": "SEVEN MOUNTAIN",
+      "product": "Vaslina COP 3150",
+      "nomat": "1100011773",
+      "formula_code": "3150 (4)"
+    },
+    {
+      "customer": "SELPASINDO",
+      "product": "Vaslina COP 3150",
+      "nomat": "1100003560",
+      "formula_code": "3150 (4)"
+    },
+    {
+      "customer": "GLORIA",
+      "product": "Vaslina 500 T",
+      "nomat": "1100014066",
+      "formula_code": "500T (4)"
+    },
+    {
+      "customer": "PRISKILA",
+      "product": "Vaslina W150",
+      "nomat": "1100016791",
+      "formula_code": "W150 (4)"
+    },
+    {
+      "customer": "LION WINGS",
+      "product": "Vaslina COP 3151 (I)",
+      "nomat": "1100017689",
+      "formula_code": "3151 (I) (5)"
+    },
+    {
+      "customer": "LOTTE",
+      "product": "VASLINA 720 P",
+      "nomat": "1100019781",
+      "formula_code": "720P (4)"
+    },
+    {
+      "customer": "PETERNAKAN SAPI",
+      "product": "VASLINA L1125",
+      "nomat": "1100017034",
+      "formula_code": "L1125 (4)"
+    },
+    {
+      "customer": "HENDRA",
+      "product": "VASLINA L1125",
+      "nomat": "1100011771",
+      "formula_code": "L1125 (4)"
+    },
+    {
+      "customer": "AFIFARMA",
+      "product": "VASLINA L1125-II",
+      "nomat": "1100018905",
+      "formula_code": "L1125 (II) (7)"
+    },
+    {
+      "customer": "AFIFARMA",
+      "product": "VASLINA L1125-II / VASLINA RLII112515",
+      "nomat": "1100018905",
+      "formula_code": "L1125 (II) (7)"
+    },
+    {
+      "customer": "KINO",
+      "product": "VASLINA L1125",
+      "nomat": "1100013599",
+      "formula_code": "L1125 (4)"
+    },
+    {
+      "customer": "CANADA GREEN GATE",
+      "product": "VASLINA 905E",
+      "nomat": "1100017177",
+      "formula_code": "905E (4)"
+    },
+    {
+      "customer": "VITAPHARM",
+      "product": "VASLINA SP120",
+      "nomat": "1100016950",
+      "formula_code": "SP120 (4)"
+    },
+    {
+      "customer": "PRISKILIA",
+      "product": "PARAWAX MC 70",
+      "nomat": "1100013818",
+      "formula_code": "MC70"
+    },
+    {
+      "customer": "CATEL",
+      "product": "VASLINA COP 3152P",
+      "nomat": "1100022016",
+      "formula_code": "3152P (3)"
+    },
+    {
+      "customer": "",
+      "product": "VASLINA COP 3153",
+      "nomat": "1100013478",
+      "formula_code": "3153 (3)"
+    },
+    {
+      "customer": "INDAC",
+      "product": "WHITE PARAWAX 70",
+      "nomat": "1100020880",
+      "formula_code": "WPW70"
+    },
+    {
+      "customer": "",
+      "product": "VASLINA YB01",
+      "nomat": "",
+      "formula_code": "YB01"
+    }
+  ]
+}
