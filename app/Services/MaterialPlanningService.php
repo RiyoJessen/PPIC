@@ -56,7 +56,7 @@ class MaterialPlanningService
         }
 
         $availableStock = (float) $summary['available_stock'];
-        $safetyStock = (float) $summary['safety_stock'];
+        $minimumStock = (float) ($summary['minimum_stock'] ?? 0);
         $moq = (float) $summary['moq'];
         $orderMultiple = (float) $summary['order_multiple'] ?: 1.0;
         $leadTime = (int) $summary['lead_time_days'];
@@ -66,14 +66,14 @@ class MaterialPlanningService
             $dailyUsage = $history['daily_average'];
             $usageSource = "Historis Riil ({$history['lookback_days']} Hari Terakhir)";
         } else {
-            $dailyUsage = ($summary['reorder_point'] - $safetyStock) > 0 && $leadTime > 0
-                ? (($summary['reorder_point'] - $safetyStock) / $leadTime)
-                : ($safetyStock / 10);
-            $usageSource = 'Estimasi Model ROP & Safety Stock';
+            $dailyUsage = $minimumStock > 0 && $leadTime > 0
+                ? ($minimumStock / $leadTime)
+                : 0.0;
+            $usageSource = 'Estimasi Minimum Stock & Lead Time';
         }
 
         $periodDemand = $dailyUsage * $periodDays;
-        $rawQty = max(0.0, $periodDemand + $safetyStock - $availableStock);
+        $rawQty = max(0.0, $periodDemand - $availableStock);
         $recommendedQty = 0.0;
         if ($rawQty > 0) {
             $recommendedQty = max($rawQty, $moq);
@@ -89,7 +89,7 @@ class MaterialPlanningService
             'usage_source' => $usageSource,
             'historical_stats' => $history,
             'period_demand' => round($periodDemand, 2),
-            'safety_stock' => $safetyStock,
+            'minimum_stock' => $minimumStock,
             'available_stock' => $availableStock,
             'raw_recommended_qty' => round($rawQty, 2),
             'final_recommended_qty' => round($recommendedQty, 2),

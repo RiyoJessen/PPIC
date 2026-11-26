@@ -316,7 +316,7 @@ class SalesForecastService
     {
         $bomItems = Database::select("
             SELECT bi.*, m.code as material_code, m.name as material_name, m.unit as material_unit,
-                   m.unit_cost, m.safety_stock, m.moq, m.order_multiple, m.lead_time_days
+                   m.unit_cost, m.moq, m.order_multiple, m.lead_time_days
             FROM bom_items bi
             JOIN materials m ON m.id = bi.material_id
             WHERE bi.bom_id = :bid
@@ -342,12 +342,11 @@ class SalesForecastService
                 $coveredItemCount++;
             }
 
-            $safetyStock = max(0.0, (float) ($stock['safety_stock'] ?? $item['safety_stock'] ?? 0));
             $moq = max(0.0, (float) ($stock['moq'] ?? $item['moq'] ?? 0));
             $multiple = max(1.0, (float) ($stock['order_multiple'] ?? $item['order_multiple'] ?? 1));
             $buyQty = 0.0;
             if ($shortage > 0) {
-                $buyQty = max($shortage + $safetyStock, $moq);
+                $buyQty = max($shortage, $moq);
                 $buyQty = ceil($buyQty / $multiple) * $multiple;
             }
             $unitCost = (float) ($stock['unit_cost'] ?? $item['unit_cost'] ?? 0);

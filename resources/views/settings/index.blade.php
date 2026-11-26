@@ -1,85 +1,20 @@
 @php
-$pageTitle = 'Pengaturan Sistem & Ganti Data';
+$pageTitle = 'Pengaturan Sistem';
 @endphp
 @include('layouts.header')
 
 <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
     <div>
-        <h3 class="fw-bold mb-1 text-dark">Pengaturan Sistem &amp; Manajemen Data</h3>
+        <h3 class="fw-bold mb-1 text-dark">Pengaturan Sistem</h3>
         <p class="text-muted small mb-0">
-            Pusat impor data aktual bahan baku PT Dunia Kimia Jaya Gresik, pengaturan notifikasi email, dan integrasi Google Gemini API.
+            Pengaturan notifikasi email dan integrasi Google Gemini API.
         </p>
     </div>
 </div>
 
 <div class="row g-4">
-    <!-- Section 1: Manajemen & Impor Data Aktual -->
-    <div class="col-12 col-lg-7">
-        <div class="card border-0 shadow-sm border-start border-4 border-primary mb-4">
-            <div class="card-header bg-white py-3 fw-bold d-flex justify-content-between align-items-center">
-                <span><i class="fas fa-database text-primary me-2"></i> Manajemen &amp; Impor Data Aktual</span>
-                <span class="badge bg-primary-subtle text-primary">Data Aktual</span>
-            </div>
-            <div class="card-body">
-                <p class="text-secondary small mb-3">
-                    Sistem berjalan dalam mode <strong>data aktual PT Dunia Kimia Jaya Gresik</strong>. Anda dapat mengimpor daftar bahan baku melalui file CSV atau membersihkan seluruh data transaksi melalui panel di bawah ini:
-                </p>
-
-                <div class="row g-2 mb-4 text-center">
-                    <div class="col-4">
-                        <div class="p-2 border rounded bg-light">
-                            <span class="text-muted small">Bahan Baku:</span>
-                            <div class="fw-bold font-monospace fs-5 text-primary"><?= $stats['materials_count'] ?></div>
-                        </div>
-                    </div>
-                    <div class="col-4">
-                        <div class="p-2 border rounded bg-light">
-                            <span class="text-muted small">Produk Jadi:</span>
-                            <div class="fw-bold font-monospace fs-5 text-dark"><?= $stats['products_count'] ?></div>
-                        </div>
-                    </div>
-                    <div class="col-4">
-                        <div class="p-2 border rounded bg-light">
-                            <span class="text-muted small">Batch Stok Fisik:</span>
-                            <div class="fw-bold font-monospace fs-5 text-success"><?= $stats['batches_count'] ?></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Action 1: Import CSV -->
-                <h6 class="fw-bold text-dark small text-uppercase mb-2"><i class="fas fa-file-upload text-primary me-1"></i> Impor Data Bahan Baku Aktual (CSV):</h6>
-                <form action="/settings/import-csv" method="POST" enctype="multipart/form-data" class="mb-4">
-                    <div class="input-group input-group-sm mb-2">
-                        <input type="file" name="csv_file" class="form-control" accept=".csv,text/csv" required>
-                        <button type="submit" class="btn btn-primary px-3">
-                            <i class="fas fa-upload me-1"></i> Impor Data Sekarang
-                        </button>
-                    </div>
-                    <div class="d-flex justify-content-between align-items-center">
-                        <small class="text-muted">Format: <code>code, name, unit, min_stock, safety_stock, reorder_point, lead_time, moq, unit_cost</code></small>
-                        <a href="/settings/download-template" class="small text-decoration-none fw-semibold">
-                            <i class="fas fa-download me-1"></i> Unduh Contoh Template CSV
-                        </a>
-                    </div>
-                </form>
-
-                <hr class="my-4">
-
-                <!-- Action 2: Wipe -->
-                <h6 class="fw-bold text-dark small text-uppercase mb-2"><i class="fas fa-tools text-secondary me-1"></i> Pembersihan Data:</h6>
-                <div class="d-flex flex-wrap gap-2">
-                    <form action="/settings/wipe-data" method="POST" onsubmit="return confirm('PERINGATAN: Seluruh data bahan baku, produk, formula, stok, dan transaksi akan dikosongkan. Lanjutkan?')">
-                        <button type="submit" class="btn btn-outline-danger btn-sm">
-                            <i class="fas fa-trash-alt me-1"></i> Kosongkan Seluruh Data (Clean Slate)
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- Section 2: Konfigurasi Gemini AI & Database -->
-    <div class="col-12 col-lg-5">
+    <div class="col-12 col-lg-8 mx-auto">
         <!-- Email Notification Settings -->
         <div class="card border-0 shadow-sm border-start border-4 border-danger mb-4">
             <div class="card-header bg-white py-3 fw-bold d-flex justify-content-between align-items-center">

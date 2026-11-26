@@ -13,7 +13,6 @@ class SettingsController extends Controller
 {
     public static function index(): array
     {
-        $dbDriver = AppConfig::getDbDriver();
         $apiKey = AppConfig::getGeminiApiKey();
         $model = AppConfig::getGeminiModel();
 
@@ -32,21 +31,11 @@ class SettingsController extends Controller
             SELECT * FROM email_notification_logs ORDER BY id DESC LIMIT 15
         ");
 
-        $stats = [
-            'materials_count' => Database::selectOne("SELECT COUNT(*) as c FROM materials")['c'] ?? 0,
-            'products_count' => Database::selectOne("SELECT COUNT(*) as c FROM products")['c'] ?? 0,
-            'boms_count' => Database::selectOne("SELECT COUNT(*) as c FROM boms")['c'] ?? 0,
-            'batches_count' => Database::selectOne("SELECT COUNT(*) as c FROM inventory_batches")['c'] ?? 0,
-            'email_count' => Database::selectOne("SELECT COUNT(*) as c FROM email_notification_logs")['c'] ?? 0,
-        ];
-
         return [
-            'db_driver' => $dbDriver,
             'api_key' => $apiKey,
             'model' => $model,
             'mail_config' => $mailConfig,
             'email_logs' => $emailLogs,
-            'stats' => $stats,
         ];
     }
 
@@ -131,12 +120,26 @@ class SettingsController extends Controller
         ]);
     }
 
+    public static function importRawMaterialWorkbooks(string $leadTimePath, ?string $usagePath, int $userId): array
+    {
+        return \App\Services\RawMaterialWorkbookImportService::import(
+            $leadTimePath,
+            $usagePath,
+            $userId
+        );
+    }
+
     public static function importMaterialsCsv(string $csvContent, int $userId): int
     {
         $lines = explode("\n", str_replace("\r", "", trim($csvContent)));
         if (count($lines) < 2) return 0;
 
-        $header = str_getcsv(array_shift($lines));
+        $header = array_map(
+            static fn(string $column): string => strtolower(trim($column)),
+            str_getcsv(array_shift($lines))
+        );
+        $headerIndexes = array_flip($header);
+        $hasNamedHeader = isset($headerIndexes['code']) && isset($headerIndexes['name']);
         $count = 0;
 
         Database::beginTransaction();
@@ -146,16 +149,27 @@ class SettingsController extends Controller
                 $row = str_getcsv($line);
                 if (count($row) < 3) continue;
 
-                // Format: code, name, unit, min_stock, safety_stock, reorder_point, lead_time, moq, unit_cost
-                $code = trim($row[0] ?? '');
-                $name = trim($row[1] ?? '');
-                $unit = trim($row[2] ?? 'Kg');
-                $min = (float) ($row[3] ?? 0);
-                $safety = (float) ($row[4] ?? 0);
-                $rop = (float) ($row[5] ?? 0);
-                $lead = (int) ($row[6] ?? 7);
-                $moq = (float) ($row[7] ?? 0);
-                $cost = (float) ($row[8] ?? 0);
+                if ($hasNamedHeader) {
+                    $value = static function (string $column, mixed $default = '') use ($headerIndexes, $row): mixed {
+                        return isset($headerIndexes[$column]) ? ($row[$headerIndexes[$column]] ?? $default) : $default;
+                    };
+                    $code = trim((string) $value('code'));
+                    $name = trim((string) $value('name'));
+                    $unit = trim((string) $value('unit', 'Kg'));
+                    $min = (float) $value('min_stock', $value('minimum_stock', 0));
+                    $lead = (int) $value('lead_time_days', $value('lead_time', 7));
+                    $moq = (float) $value('moq', 0);
+                    $cost = (float) $value('unit_cost', 0);
+                } else {
+                    $code = trim($row[0] ?? '');
+                    $name = trim($row[1] ?? '');
+                    $unit = trim($row[2] ?? 'Kg');
+                    $min = (float) ($row[3] ?? 0);
+                    $legacyLayout = count($row) >= 9;
+                    $lead = (int) ($row[$legacyLayout ? 6 : 4] ?? 7);
+                    $moq = (float) ($row[$legacyLayout ? 7 : 5] ?? 0);
+                    $cost = (float) ($row[$legacyLayout ? 8 : 6] ?? 0);
+                }
 
                 if ($code === '' || $name === '') continue;
 
@@ -166,8 +180,6 @@ class SettingsController extends Controller
                         'name' => $name,
                         'unit' => $unit,
                         'min_stock' => $min,
-                        'safety_stock' => $safety,
-                        'reorder_point' => $rop,
                         'lead_time_days' => $lead,
                         'moq' => $moq,
                         'unit_cost' => $cost,
@@ -179,8 +191,6 @@ class SettingsController extends Controller
                         'category_id' => 1,
                         'unit' => $unit,
                         'min_stock' => $min,
-                        'safety_stock' => $safety,
-                        'reorder_point' => $rop,
                         'lead_time_days' => $lead,
                         'moq' => $moq,
                         'order_multiple' => 1,

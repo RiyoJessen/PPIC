@@ -86,7 +86,6 @@ require dirname(__DIR__) . '/layouts/header.php';
                             <th>Tgl Analisis</th>
                             <th>Bahan Baku</th>
                             <th class="text-end">Stok Saat Itu</th>
-                            <th class="text-end">Safety Stock</th>
                             <th class="text-end">Rekomendasi Q</th>
                             <th class="text-center">Risiko</th>
                             <th>Penjelasan Naratif</th>
@@ -98,7 +97,6 @@ require dirname(__DIR__) . '/layouts/header.php';
                                 <td class="font-monospace text-muted"><?= date('d/m/Y', strtotime($fe['analysis_date'])) ?></td>
                                 <td class="fw-semibold text-dark"><?= htmlspecialchars($fe['material_name']) ?></td>
                                 <td class="text-end font-monospace"><?= number_format((float)$fe['current_stock'], 0, ',', '.') ?> <?= $fe['material_unit'] ?></td>
-                                <td class="text-end font-monospace"><?= number_format((float)$fe['safety_stock'], 0, ',', '.') ?></td>
                                 <td class="text-end font-monospace fw-bold text-primary"><?= number_format((float)$fe['recommended_qty'], 0, ',', '.') ?></td>
                                 <td class="text-center">
                                     <span class="badge badge-<?= strtolower($fe['risk_level']) ?> px-2 py-1 rounded-pill">
@@ -131,7 +129,7 @@ require dirname(__DIR__) . '/layouts/header.php';
                             <th class="text-end">Stok Fisik</th>
                             <th class="text-end">Teralokasi</th>
                             <th class="text-end">Bebas Tersedia</th>
-                            <th class="text-end">Safety Stock</th>
+                            <th class="text-end">Minimum Stok</th>
                             <th class="text-center">Status</th>
                         </tr>
                     </thead>
@@ -142,10 +140,10 @@ require dirname(__DIR__) . '/layouts/header.php';
                                 <td class="fw-semibold text-dark"><?= htmlspecialchars($m['name']) ?></td>
                                 <td class="text-end font-monospace"><?= number_format($m['physical_stock'], 0, ',', '.') ?> <?= $m['unit'] ?></td>
                                 <td class="text-end font-monospace text-secondary"><?= number_format($m['allocated_stock'], 0, ',', '.') ?></td>
-                                <td class="text-end font-monospace fw-bold <?= $m['available_stock'] <= $m['safety_stock'] ? 'text-danger' : 'text-success' ?>">
+                                <td class="text-end font-monospace fw-bold <?= $m['available_stock'] <= $m['minimum_stock'] ? 'text-danger' : 'text-success' ?>">
                                     <?= number_format($m['available_stock'], 0, ',', '.') ?>
                                 </td>
-                                <td class="text-end font-monospace"><?= number_format($m['safety_stock'], 0, ',', '.') ?></td>
+                                <td class="text-end font-monospace"><?= !empty($m['minimum_stock_note']) ? htmlspecialchars($m['minimum_stock_note']) : number_format($m['minimum_stock'], 0, ',', '.') ?></td>
                                 <td class="text-center">
                                     <span class="badge badge-<?= strtolower($m['stock_status']) ?> px-2 py-1 rounded-pill"><?= $m['stock_status'] ?></span>
                                 </td>

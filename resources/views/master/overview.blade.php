@@ -86,11 +86,11 @@ if (!empty($products)) {
 
     $topMaterials = $materials;
     usort($topMaterials, function ($a, $b) {
-        $aRatio = (float) ($a['reorder_point'] ?? 1) > 0
-            ? (float) $a['available_stock'] / (float) $a['reorder_point']
+        $aRatio = (float) ($a['minimum_stock'] ?? 1) > 0
+            ? (float) $a['available_stock'] / (float) $a['minimum_stock']
             : 1;
-        $bRatio = (float) ($b['reorder_point'] ?? 1) > 0
-            ? (float) $b['available_stock'] / (float) $b['reorder_point']
+        $bRatio = (float) ($b['minimum_stock'] ?? 1) > 0
+            ? (float) $b['available_stock'] / (float) $b['minimum_stock']
             : 1;
         return $aRatio <=> $bRatio;
     });
@@ -127,8 +127,8 @@ if (!empty($products)) {
             </div>
             <?php foreach ($topMaterials as $material):
                 $status = $material['stock_status'] ?? 'Aman';
-                $progress = (float) ($material['reorder_point'] ?? 0) > 0
-                    ? min(100, ((float) $material['available_stock'] / (float) $material['reorder_point']) * 100)
+                $progress = (float) ($material['minimum_stock'] ?? 0) > 0
+                    ? min(100, ((float) $material['available_stock'] / (float) $material['minimum_stock']) * 100)
                     : 100;
             ?>
                 <div class="material-bento-row">

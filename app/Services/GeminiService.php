@@ -22,7 +22,6 @@ class GeminiService
             'material_id' => $materialId,
             'analysis_date' => date('Y-m-d'),
             'current_stock' => $mat['physical_stock'],
-            'safety_stock' => $mat['safety_stock'],
             'projected_demand_30d' => $rec['period_demand'],
             'recommended_qty' => $rec['final_recommended_qty'],
             'risk_level' => $mat['stock_status'],
@@ -38,6 +37,9 @@ class GeminiService
     {
         $mat = $rec['material'];
         $model = AppConfig::getGeminiModel();
+        $minimumStock = !empty($mat['minimum_stock_note'])
+            ? $mat['minimum_stock_note']
+            : number_format((float) $mat['minimum_stock'], 0, ',', '.');
         $url = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key=" . urlencode($apiKey);
 
         $prompt = <<<PROMPT
@@ -51,8 +53,7 @@ Data Bahan Baku:
 - Stok Fisik: {$mat['physical_stock']} {$mat['unit']}
 - Stok Teralokasi: {$mat['allocated_stock']} {$mat['unit']}
 - Stok Bebas Tersedia: {$mat['available_stock']} {$mat['unit']}
-- Safety Stock: {$mat['safety_stock']} {$mat['unit']}
-- Reorder Point (ROP): {$mat['reorder_point']} {$mat['unit']}
+- Minimum Stock (batas pemesanan kembali): {$minimumStock} {$mat['unit']}
 - Supplier Utama: {$mat['supplier_name']} (Lead Time: {$mat['supplier_lead_time']} hari)
 - Perkiraan Kebutuhan 30 Hari: {$rec['period_demand']} {$mat['unit']}
 - Rekomendasi Jumlah Tambahan (Q): {$rec['final_recommended_qty']} {$mat['unit']}
@@ -115,7 +116,9 @@ PROMPT;
         $mat = $rec['material'];
         $name = $mat['name'];
         $avail = number_format((float) $mat['available_stock'], 0, ',', '.');
-        $safety = number_format((float) $mat['safety_stock'], 0, ',', '.');
+        $minimum = !empty($mat['minimum_stock_note'])
+            ? $mat['minimum_stock_note']
+            : number_format((float) $mat['minimum_stock'], 0, ',', '.');
         $phys = number_format((float) $mat['physical_stock'], 0, ',', '.');
         $alloc = number_format((float) $mat['allocated_stock'], 0, ',', '.');
         $supplier = $mat['supplier_name'] ?: 'Supplier Terdaftar';
@@ -124,17 +127,17 @@ PROMPT;
         $unit = $mat['unit'];
 
         if ($mat['stock_status'] === 'Kritis') {
-            $narrative = "Persediaan {$name} saat ini berada dalam status **Kritis**. Saldo stok fisik tercatat {$phys} {$unit}, dengan stok teralokasi sebesar {$alloc} {$unit}, sehingga persediaan bebas yang siap pakai hanya tersisa {$avail} {$unit}. Angka ini telah menembus batas safety stock ({$safety} {$unit}).\n\n"
+            $narrative = "Persediaan {$name} saat ini berada dalam status **Kritis**. Saldo stok fisik tercatat {$phys} {$unit}, dengan stok teralokasi sebesar {$alloc} {$unit}, sehingga persediaan bebas yang siap pakai hanya tersisa {$avail} {$unit}. Stok berada di bawah minimum stok ({$minimum} {$unit}).\n\n"
                 . "Dengan lead time acuan {$supplier} sekitar {$leadTime} hari kerja, keterlambatan menindaklanjuti kebutuhan material berpotensi menghambat pemenuhan target quotation/SO PT Dunia Kimia Jaya Gresik.\n\n"
-                . "Sistem merekomendasikan jumlah tambahan **{$q} {$unit}** berdasarkan rencana kebutuhan, stok bebas, safety stock, dan MOQ untuk bahan pertimbangan PPIC.";
+                . "Sistem merekomendasikan jumlah tambahan **{$q} {$unit}** berdasarkan rencana kebutuhan, stok bebas, dan MOQ untuk bahan pertimbangan PPIC.";
             $trend = 'naik';
         } elseif ($mat['stock_status'] === 'Waspada') {
-            $narrative = "Kondisi stok {$name} teridentifikasi dalam kategori **Waspada**. Stok bebas tersedia ({$avail} {$unit}) masih berada di atas batas safety stock ({$safety} {$unit}), namun telah berada di bawah ambang Reorder Point (ROP).\n\n"
+            $narrative = "Kondisi stok {$name} teridentifikasi dalam kategori **Waspada**. Stok bebas tersedia ({$avail} {$unit}) telah mencapai atau berada di bawah minimum stok ({$minimum} {$unit}).\n\n"
                 . "Dengan rata-rata pemakaian harian serta lead time pemesanan {$leadTime} hari ke {$supplier}, persediaan diperkirakan memasuki zona merah dalam kurun waktu 5–7 hari mendatang apabila terdapat penambahan permintaan sales baru.\n\n"
                 . "Sistem merekomendasikan kebutuhan tambahan indikatif sebesar **{$q} {$unit}** untuk menjaga kesinambungan persediaan tanpa menyebabkan penumpukan stok berlebih di gudang.";
             $trend = 'stabil';
         } else {
-            $narrative = "Persediaan {$name} saat ini berada dalam zona **Aman** ({$avail} {$unit} tersedia vs safety stock {$safety} {$unit}). Ketersediaan raw material terpantau mencukupi dan kapasitas gudang tetap optimal.\n\n"
+            $narrative = "Persediaan {$name} saat ini berada dalam zona **Aman** ({$avail} {$unit} tersedia; minimum stok {$minimum} {$unit}). Ketersediaan raw material terpantau mencukupi dan kapasitas gudang tetap optimal.\n\n"
                 . "Tidak diperlukan tindakan pembelian darurat saat ini. Tim PPIC cukup memonitor tren pemakaian serta proyeksi forecast sales bulanan secara berkala.";
             $trend = 'stabil';
         }

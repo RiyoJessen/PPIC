@@ -58,6 +58,9 @@ $pageTitle = $storageConfig['title'];
                         <tr>
                             <th>Kode</th>
                             <th>Nama Bahan</th>
+                            <th>Material</th>
+                            <th>Vendor</th>
+                            <th class="text-center">Lead Time</th>
                             <th>Kategori</th>
                             <th class="text-end">Stok Tersedia</th>
                             <th class="text-center">Status</th>
@@ -67,15 +70,28 @@ $pageTitle = $storageConfig['title'];
                     </thead>
                     <tbody>
                         <?php if (empty($materials)): ?>
-                            <tr><td colspan="7" class="material-storage-empty">Belum ada data Raw Material.</td></tr>
+                            <tr><td colspan="10" class="material-storage-empty">Belum ada data Raw Material.</td></tr>
                         <?php else: ?>
                             <?php foreach ($materials as $material): ?>
+                                <?php
+                                $vendorRows = $material['vendor_options'] ?? [];
+                                if (empty($vendorRows)) {
+                                    $vendorRows = [[
+                                        'supplier_name' => $material['supplier_name'] ?? 'Supplier belum ditentukan',
+                                        'material_specification' => $material['material_name'] ?? '-',
+                                        'lead_time_days' => $material['lead_time_days'],
+                                    ]];
+                                }
+                                ?>
+                                <?php foreach ($vendorRows as $vendor): ?>
                                 <tr>
                                     <td><span class="material-storage-code"><?= htmlspecialchars($material['code']) ?></span></td>
                                     <td>
                                         <strong><?= htmlspecialchars($material['name']) ?></strong>
-                                        <div class="material-storage-meta"><?= htmlspecialchars($material['supplier_name'] ?? 'Supplier belum ditentukan') ?></div>
                                     </td>
+                                    <td><?= htmlspecialchars($vendor['material_specification'] ?: '-') ?></td>
+                                    <td><?= htmlspecialchars($vendor['supplier_name'] ?? 'Vendor tidak terdaftar') ?></td>
+                                    <td class="text-center"><?= (int) $vendor['lead_time_days'] ?> hari</td>
                                     <td><?= htmlspecialchars($material['category_name'] ?? '-') ?></td>
                                     <td class="text-end font-monospace">
                                         <strong><?= number_format((float) $material['available_stock'], 0, ',', '.') ?></strong>
@@ -93,6 +109,7 @@ $pageTitle = $storageConfig['title'];
                                         </a>
                                     </td>
                                 </tr>
+                                <?php endforeach; ?>
                             <?php endforeach; ?>
                         <?php endif; ?>
                     </tbody>

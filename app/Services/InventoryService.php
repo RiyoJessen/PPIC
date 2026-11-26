@@ -38,25 +38,38 @@ class InventoryService
             ORDER BY m.id ASC
         ", $params);
 
+        $vendorOptions = Database::select("
+            SELECT ms.material_id, s.name AS supplier_name,
+                   ms.material_specification, ms.lead_time_days
+            FROM material_suppliers ms
+            LEFT JOIN suppliers s ON s.id = ms.supplier_id
+            ORDER BY ms.material_id ASC, ms.id ASC
+        ");
+        $vendorsByMaterial = [];
+        foreach ($vendorOptions as $vendor) {
+            $vendorsByMaterial[(int) $vendor['material_id']][] = $vendor;
+        }
+
         foreach ($rows as &$item) {
             $physical = (float) $item['physical_stock'];
             $allocated = (float) $item['allocated_stock'];
             $available = max(0.0, $physical - $allocated);
-            $safety = (float) $item['safety_stock'];
-            $reorderPoint = (float) $item['reorder_point'];
+            $minimumStock = (float) ($item['min_stock'] ?? 0);
 
             $item['physical_stock'] = $physical;
             $item['allocated_stock'] = $allocated;
             $item['available_stock'] = $available;
+            $item['vendor_options'] = $vendorsByMaterial[(int) $item['id']] ?? [];
+            $item['minimum_stock'] = $minimumStock;
 
-            if ($available <= $safety || $available < ($reorderPoint * 0.5)) {
+            if ($available <= 0 || ($minimumStock > 0 && $available < ($minimumStock * 0.5))) {
                 $item['stock_status'] = 'Kritis';
                 $item['status_badge'] = 'danger';
-                $item['status_note'] = 'Stok tersedia di bawah batas safety stock / minimum.';
-            } elseif ($available <= $reorderPoint) {
+                $item['status_note'] = 'Stok kosong atau kurang dari setengah batas minimum stok.';
+            } elseif ($minimumStock > 0 && $available <= $minimumStock) {
                 $item['stock_status'] = 'Waspada';
                 $item['status_badge'] = 'warning text-dark';
-                $item['status_note'] = 'Stok mendekati atau berada di bawah Reorder Point (ROP).';
+                $item['status_note'] = 'Stok mencapai atau berada di bawah minimum stok.';
             } else {
                 $item['stock_status'] = 'Aman';
                 $item['status_badge'] = 'success';

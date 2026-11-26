@@ -35,15 +35,23 @@ class MasterController extends Controller
     public static function materials(): array
     {
         $materials = InventoryService::getMaterialStockSummary();
-        $categories = Database::select("SELECT * FROM categories ORDER BY name ASC");
-        $warehouses = Database::select("SELECT * FROM warehouses ORDER BY name ASC");
-        $suppliers = Database::select("SELECT * FROM suppliers ORDER BY name ASC");
+        $vendorRowsCount = array_sum(array_map(
+            static fn(array $material): int => max(1, count($material['vendor_options'] ?? [])),
+            $materials
+        ));
 
         return [
             'materials' => $materials,
-            'categories' => $categories,
-            'warehouses' => $warehouses,
-            'suppliers' => $suppliers,
+            'vendor_rows_count' => $vendorRowsCount,
+        ] + self::materialFormOptions();
+    }
+
+    public static function materialFormOptions(): array
+    {
+        return [
+            'categories' => Database::select("SELECT * FROM categories ORDER BY name ASC"),
+            'warehouses' => Database::select("SELECT * FROM warehouses ORDER BY name ASC"),
+            'suppliers' => Database::select("SELECT * FROM suppliers ORDER BY name ASC"),
         ];
     }
 
@@ -89,11 +97,10 @@ class MasterController extends Controller
         $id = Database::insert('materials', [
             'code' => trim($data['code']),
             'name' => trim($data['name']),
+            'material_name' => trim($data['material_name'] ?? ''),
             'category_id' => (int) $data['category_id'] ?: null,
             'unit' => trim($data['unit']),
             'min_stock' => (float) ($data['min_stock'] ?? 0),
-            'safety_stock' => (float) ($data['safety_stock'] ?? 0),
-            'reorder_point' => (float) ($data['reorder_point'] ?? 0),
             'lead_time_days' => (int) ($data['lead_time_days'] ?? 7),
             'moq' => (float) ($data['moq'] ?? 0),
             'order_multiple' => (float) ($data['order_multiple'] ?? 1),
@@ -569,7 +576,7 @@ class MasterController extends Controller
     {
         $suppliers = Database::select("
             SELECT s.*, 
-                   (SELECT COUNT(*) FROM materials WHERE preferred_supplier_id = s.id) as material_count
+                   (SELECT COUNT(DISTINCT material_id) FROM material_suppliers WHERE supplier_id = s.id) as material_count
             FROM suppliers s
             ORDER BY s.id ASC
         ");

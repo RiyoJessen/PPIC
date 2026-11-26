@@ -251,9 +251,9 @@ class PriceForecastService
             $trendLabel = 'Stabil';
             $trendBadge = 'info';
             $signalCode = 'BUY_NORMAL';
-            $signalLabel = 'Beli Sesuai Jadwal ROP';
+            $signalLabel = 'Beli Sesuai Minimum Stok';
             $signalBadge = 'info';
-            $signalDetail = "Harga pasar relatif stabil ({$priceChangePct}%). Lakukan pengadaan normal sesuai jadwal ROP dan safety stock.";
+            $signalDetail = "Harga pasar relatif stabil ({$priceChangePct}%). Lakukan pengadaan normal saat stok mencapai minimum.";
         }
 
         // Dampak anggaran terhadap kuantitas rekomendasi Q
@@ -492,7 +492,7 @@ PROMPT;
         } else {
             $pctStr = ($pct >= 0 ? '+' : '') . number_format($pct, 2, ',', '.');
             $narrative = "Harga pasar **{$name}** pada **{$nextMonth}** diproyeksikan bergerak **stabil** ({$pctStr}%) di kisaran **Rp {$fcast}/{$unit}** (rentang Rp {$low} – Rp {$high}/{$unit}, dibanding bulan ini Rp {$cur}/{$unit}). Kondisi ini didukung oleh {$drivers[0]}.\n\n"
-                . "Rekomendasi PPIC: belum ada urgensi perubahan waktu pemenuhan. Pantau kebutuhan, ROP, MOQ, dan harga acuan {$supplier}.";
+                . "Rekomendasi PPIC: belum ada urgensi perubahan waktu pemenuhan. Pantau kebutuhan, minimum stok, MOQ, dan harga acuan {$supplier}.";
         }
 
         return [

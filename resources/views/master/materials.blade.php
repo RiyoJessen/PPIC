@@ -7,7 +7,7 @@ $pageTitle = 'Master Data & Stok Bahan Baku (Raw Material)';
     <div>
         <h3 class="fw-bold mb-1 text-dark">Master Data &amp; Stok Bahan Baku (Raw Material)</h3>
         <p class="text-muted small mb-0">
-            Pengelolaan terpadu spesifikasi bahan baku, saldo stok tersedia, safety stock, ROP, lead time, MOQ, dan harga acuan.
+            Pengelolaan terpadu spesifikasi bahan baku, saldo stok tersedia, minimum stok, lead time, MOQ, dan harga acuan.
         </p>
     </div>
     <div class="d-flex flex-wrap gap-2">
@@ -17,9 +17,9 @@ $pageTitle = 'Master Data & Stok Bahan Baku (Raw Material)';
         <button class="btn btn-primary btn-sm px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#createMaterialModal">
             <i class="fas fa-plus-circle me-1"></i> Tambah Bahan Baku
         </button>
-        <a href="/settings" class="btn btn-outline-secondary btn-sm">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#importCsvModal">
             <i class="fas fa-file-csv me-1"></i> Import CSV
-        </a>
+        </button>
     </div>
 </div>
 
@@ -30,10 +30,10 @@ $pageTitle = 'Master Data & Stok Bahan Baku (Raw Material)';
                 <input type="text" class="form-control form-control-sm table-search" data-target="#materialsMasterTable" placeholder="Cari nama bahan, kode...">
             </div>
             <div class="col-md-8 text-md-end small text-muted">
-                <span class="me-3"><i class="fas fa-square text-danger me-1"></i> Kritis (&le; Safety Stock)</span>
-                <span class="me-3"><i class="fas fa-square text-warning me-1"></i> Waspada (&le; ROP)</span>
+                <span class="me-3"><i class="fas fa-square text-danger me-1"></i> Kritis (kosong / &lt; 50% minimum)</span>
+                <span class="me-3"><i class="fas fa-square text-warning me-1"></i> Waspada (&le; minimum stok)</span>
                 <span class="me-3"><i class="fas fa-square text-success me-1"></i> Aman</span>
-                <span>Total: <strong><?= count($materials) ?></strong> Item</span>
+                <span><strong><?= count($materials) ?></strong> Material &bull; <strong><?= (int) $vendor_rows_count ?></strong> Baris Vendor</span>
             </div>
         </div>
     </div>
@@ -43,14 +43,14 @@ $pageTitle = 'Master Data & Stok Bahan Baku (Raw Material)';
                 <tr>
                     <th>Kode</th>
                     <th>Nama Bahan Baku</th>
+                    <th>Material / Spesifikasi</th>
                     <th class="text-end">Stok Tersedia</th>
                     <th class="text-center">Status</th>
-                    <th class="text-end">Safety Stock</th>
-                    <th class="text-end">ROP</th>
+                    <th class="text-end">Minimum Stok</th>
                     <th class="text-center">Lead Time</th>
                     <th class="text-end">MOQ</th>
                     <th class="text-end">Harga Satuan</th>
-                    <th>Supplier</th>
+                    <th>Vendor</th>
                     <th class="text-center">Aksi</th>
                 </tr>
             </thead>
@@ -61,11 +61,25 @@ $pageTitle = 'Master Data & Stok Bahan Baku (Raw Material)';
                     </tr>
                 <?php else: ?>
                     <?php foreach ($materials as $m): ?>
+                        <?php
+                        $vendorRows = $m['vendor_options'] ?? [];
+                        if (empty($vendorRows)) {
+                            $vendorRows = [[
+                                'supplier_name' => $m['supplier_name'] ?? '-',
+                                'material_specification' => $m['material_name'] ?? '',
+                                'lead_time_days' => $m['lead_time_days'],
+                            ]];
+                        }
+                        ?>
+                        <?php foreach ($vendorRows as $vendor): ?>
                         <tr>
                             <td class="font-monospace fw-semibold text-primary"><?= htmlspecialchars($m['code']) ?></td>
                             <td>
                                 <div class="fw-semibold text-dark"><?= htmlspecialchars($m['name']) ?></div>
                                 <small class="text-muted"><?= htmlspecialchars($m['category_name'] ?? '-') ?> &bull; <?= htmlspecialchars($m['storage_condition'] ?: 'Penyimpanan standar') ?></small>
+                            </td>
+                            <td>
+                                <div class="small fw-semibold text-dark"><?= htmlspecialchars($vendor['material_specification'] ?: '-') ?></div>
                             </td>
                             <td class="text-end font-monospace fw-bold <?= $m['stock_status'] === 'Kritis' ? 'text-danger' : ($m['stock_status'] === 'Waspada' ? 'text-warning-emphasis' : 'text-success') ?>">
                                 <?= number_format((float)$m['available_stock'], 0, ',', '.') ?> <small class="fw-normal text-muted"><?= htmlspecialchars($m['unit']) ?></small>
@@ -75,13 +89,12 @@ $pageTitle = 'Master Data & Stok Bahan Baku (Raw Material)';
                                     <?= htmlspecialchars($m['stock_status']) ?>
                                 </span>
                             </td>
-                            <td class="text-end font-monospace text-danger"><?= number_format((float)$m['safety_stock'], 0, ',', '.') ?></td>
-                            <td class="text-end font-monospace text-warning-emphasis"><?= number_format((float)$m['reorder_point'], 0, ',', '.') ?></td>
-                            <td class="text-center"><span class="badge bg-light text-dark border"><?= (int)$m['lead_time_days'] ?> Hari</span></td>
+                            <td class="text-end font-monospace text-warning-emphasis"><?= !empty($m['minimum_stock_note']) ? htmlspecialchars($m['minimum_stock_note']) : number_format((float)$m['minimum_stock'], 0, ',', '.') ?></td>
+                            <td class="text-center"><span class="badge bg-light text-dark border"><?= (int)$vendor['lead_time_days'] ?> Hari</span></td>
                             <td class="text-end font-monospace"><?= number_format((float)$m['moq'], 0, ',', '.') ?></td>
                             <td class="text-end font-monospace fw-bold text-dark">Rp <?= number_format((float)$m['unit_cost'], 0, ',', '.') ?></td>
                             <td>
-                                <div class="small fw-semibold"><?= htmlspecialchars($m['supplier_name'] ?? '-') ?></div>
+                                <div class="small fw-semibold"><?= htmlspecialchars($vendor['supplier_name'] ?? 'Vendor tidak terdaftar') ?></div>
                             </td>
                             <td class="text-center text-nowrap">
                                 <div class="btn-group btn-group-sm">
@@ -97,10 +110,43 @@ $pageTitle = 'Master Data & Stok Bahan Baku (Raw Material)';
                                 </div>
                             </td>
                         </tr>
+                        <?php endforeach; ?>
                     <?php endforeach; ?>
                 <?php endif; ?>
             </tbody>
         </table>
+    </div>
+</div>
+
+<!-- Modal Import CSV -->
+<div class="modal fade" id="importCsvModal" tabindex="-1" aria-labelledby="importCsvModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form action="/master/materials/import-csv" method="POST" enctype="multipart/form-data">
+                <div class="modal-header">
+                    <h6 class="modal-title fw-bold" id="importCsvModalLabel">
+                        <i class="fas fa-file-csv me-2 text-success"></i> Impor Data Bahan Baku dari CSV
+                    </h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+                </div>
+                <div class="modal-body">
+                    <label for="materialCsvFile" class="form-label small fw-semibold">Pilih File CSV</label>
+                    <input type="file" id="materialCsvFile" name="csv_file" class="form-control form-control-sm" accept=".csv,text/csv" required>
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2">
+                        <small class="text-muted">Kolom: <code>code, name, unit, min_stock, lead_time_days, moq, unit_cost</code></small>
+                        <a href="/master/materials/download-template" class="small text-decoration-none fw-semibold">
+                            <i class="fas fa-download me-1"></i> Unduh Template CSV
+                        </a>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-success btn-sm px-4">
+                        <i class="fas fa-upload me-1"></i> Impor CSV
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 
@@ -183,6 +229,11 @@ $pageTitle = 'Master Data & Stok Bahan Baku (Raw Material)';
                         </div>
                     </div>
 
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Material / Spesifikasi</label>
+                        <input type="text" name="material_name" class="form-control form-control-sm" placeholder="Contoh: D80 KIXXOL / D20 ESSOL">
+                    </div>
+
                     <div class="row g-3 mb-3">
                         <div class="col-md-3">
                             <label class="form-label small fw-semibold">Kategori</label>
@@ -208,12 +259,8 @@ $pageTitle = 'Master Data & Stok Bahan Baku (Raw Material)';
 
                     <div class="row g-3 mb-3">
                         <div class="col-md-3">
-                            <label class="form-label small fw-semibold">Safety Stock</label>
-                            <input type="number" step="0.01" name="safety_stock" class="form-control form-control-sm" placeholder="5000" required>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label small fw-semibold">Reorder Point (ROP)</label>
-                            <input type="number" step="0.01" name="reorder_point" class="form-control form-control-sm" placeholder="8000" required>
+                            <label class="form-label small fw-semibold">Minimum Stok</label>
+                            <input type="number" step="0.01" min="0" name="min_stock" class="form-control form-control-sm" placeholder="Contoh: 40000" required>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label small fw-semibold">Lead Time (Hari)</label>

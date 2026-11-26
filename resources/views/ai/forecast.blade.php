@@ -7,7 +7,7 @@ $pageTitle = 'AI Forecasting & Analisis Google Gemini';
     <div>
         <h3 class="fw-bold mb-1 text-dark">AI Forecasting &amp; Gemini Procurement Advisor</h3>
         <p class="text-muted small mb-0">
-            Kombinasi kalkulasi statistik deterministik (Reorder Point &amp; Safety Stock) dengan narasi analitis cerdas berbasis Google Gemini.
+            Analisis kebutuhan material berdasarkan pemakaian, minimum stok, dan lead time dengan narasi cerdas berbasis Google Gemini.
         </p>
     </div>
     <div class="d-flex flex-wrap align-items-center gap-2">
@@ -457,7 +457,7 @@ $pageTitle = 'AI Forecasting & Analisis Google Gemini';
         <div>
             <span class="fw-bold"><i class="fas fa-table-list me-2 text-primary"></i> Matriks Estimasi Kebutuhan Raw Material</span>
             <div class="text-muted small mt-1 font-monospace" style="font-size: 11px;">
-                Rumus: Q = max(0, Kebutuhan 30 Hari + Safety Stock &minus; Stok Tersedia)
+                Rumus: Q = max(0, Kebutuhan 30 Hari &minus; Stok Tersedia)
             </div>
         </div>
         <div>
@@ -490,7 +490,7 @@ $pageTitle = 'AI Forecasting & Analisis Google Gemini';
                             <small class="text-muted" style="font-size: 10px;"><?= $rec['usage_source'] ?? 'Historis' ?></small>
                         </td>
                         <td class="text-end font-monospace"><?= number_format((float)$rec['period_demand'], 0, ',', '.') ?> <?= $m['unit'] ?></td>
-                        <td class="text-end font-monospace fw-bold <?= (float)$rec['available_stock'] <= (float)$rec['safety_stock'] ? 'text-danger' : 'text-success' ?>">
+                        <td class="text-end font-monospace fw-bold <?= (float)$rec['available_stock'] <= (float)$m['minimum_stock'] ? 'text-danger' : 'text-success' ?>">
                             <?= number_format((float)$rec['available_stock'], 0, ',', '.') ?>
                         </td>
                         <td class="text-end font-monospace fw-bold <?= ((float)$rec['final_recommended_qty'] > 0) ? 'text-primary fs-6' : 'text-muted' ?>">

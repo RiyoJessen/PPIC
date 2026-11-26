@@ -26,16 +26,44 @@ $statusClass = strtolower($material['stock_status']);
             <strong><?= number_format((float) $material['available_stock'], 0, ',', '.') ?> <?= htmlspecialchars($material['unit']) ?></strong>
         </div>
         <div>
-            <span>Safety stock</span>
-            <strong><?= number_format((float) $material['safety_stock'], 0, ',', '.') ?> <?= htmlspecialchars($material['unit']) ?></strong>
+            <span>Minimum stok</span>
+            <strong><?= !empty($material['minimum_stock_note']) ? htmlspecialchars($material['minimum_stock_note']) : number_format((float) $material['minimum_stock'], 0, ',', '.') . ' ' . htmlspecialchars($material['unit']) ?></strong>
         </div>
-        <div>
-            <span>Reorder point</span>
-            <strong><?= number_format((float) $material['reorder_point'], 0, ',', '.') ?> <?= htmlspecialchars($material['unit']) ?></strong>
+    </section>
+
+    <section class="material-detail-section">
+        <div class="material-detail-section-heading">
+            <div>
+                <h2>Vendor dan lead time</h2>
+                <p>Setiap vendor ditampilkan sebagai baris terpisah sesuai workbook sumber.</p>
+            </div>
+            <span><?= count($material['vendor_options'] ?? []) ?> vendor</span>
         </div>
-        <div>
-            <span>Supplier utama</span>
-            <strong><?= htmlspecialchars($material['supplier_name'] ?? '-') ?></strong>
+        <div class="material-storage-table-wrap">
+            <div class="table-responsive">
+                <table class="table material-storage-table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Material / Spesifikasi</th>
+                            <th>Vendor</th>
+                            <th class="text-center">Lead Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if (empty($material['vendor_options'])): ?>
+                            <tr><td colspan="3" class="material-storage-empty">Belum ada data vendor untuk material ini.</td></tr>
+                        <?php else: ?>
+                            <?php foreach ($material['vendor_options'] as $vendor): ?>
+                                <tr>
+                                    <td><?= htmlspecialchars($vendor['material_specification'] ?: '-') ?></td>
+                                    <td><?= htmlspecialchars($vendor['supplier_name'] ?? 'Vendor tidak terdaftar') ?></td>
+                                    <td class="text-center"><?= (int) $vendor['lead_time_days'] ?> hari</td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </section>
 

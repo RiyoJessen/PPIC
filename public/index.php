@@ -508,7 +508,7 @@ try {
         exit;
     }
 
-    if ($uri === '/settings/import-csv' && $method === 'POST') {
+    if (($uri === '/master/materials/import-csv' || $uri === '/settings/import-csv') && $method === 'POST') {
         if (!empty($_FILES['csv_file']['tmp_name'])) {
             $content = file_get_contents($_FILES['csv_file']['tmp_name']);
             $count = \App\Http\Controllers\SettingsController::importMaterialsCsv($content, (int) $_SESSION['user_id']);
@@ -516,17 +516,38 @@ try {
         } else {
             $_SESSION['flash_error'] = "File CSV tidak ditemukan atau gagal diunggah.";
         }
+        header('Location: /master/materials');
+        exit;
+    }
+
+    if ($uri === '/settings/import-rm-workbooks' && $method === 'POST') {
+        $leadTimePath = $_FILES['lead_time_file']['tmp_name'] ?? '';
+        $usagePath = $_FILES['usage_file']['tmp_name'] ?? '';
+        if ($leadTimePath === '') {
+            $_SESSION['flash_error'] = 'File lead time dan minimum stok wajib dipilih.';
+        } else {
+            try {
+                $result = \App\Http\Controllers\SettingsController::importRawMaterialWorkbooks(
+                    $leadTimePath,
+                    $usagePath !== '' ? $usagePath : null,
+                    (int) $_SESSION['user_id']
+                );
+                $_SESSION['flash_success'] = "Berhasil menyesuaikan {$result['materials']} master bahan baku, {$result['vendor_rows']} data vendor per material, {$result['suppliers']} supplier, dan {$result['usage_rows']} transaksi pemakaian dari workbook.";
+            } catch (\Throwable $e) {
+                $_SESSION['flash_error'] = 'Impor workbook gagal: ' . $e->getMessage();
+            }
+        }
         header('Location: /settings');
         exit;
     }
 
-    if ($uri === '/settings/download-template') {
+    if ($uri === '/master/materials/download-template' || $uri === '/settings/download-template') {
         header('Content-Type: text/csv');
         header('Content-Disposition: attachment; filename="template_bahan_baku_dkj.csv"');
-        echo "code,name,unit,min_stock,safety_stock,reorder_point,lead_time_days,moq,unit_cost\n";
-        echo "BB-101,Bauksit Halus Teknis,Kg,10000,15000,25000,5,5000,4500\n";
-        echo "BB-102,Asam Klorida 32% Bulk,Kg,8000,12000,20000,3,8000,1800\n";
-        echo "BB-103,Kostik Cair 48%,Kg,6000,10000,16000,4,5000,6300\n";
+        echo "code,name,unit,min_stock,lead_time_days,moq,unit_cost\n";
+        echo "BB-101,Bauksit Halus Teknis,Kg,25000,5,5000,4500\n";
+        echo "BB-102,Asam Klorida 32% Bulk,Kg,20000,3,8000,1800\n";
+        echo "BB-103,Kostik Cair 48%,Kg,16000,4,5000,6300\n";
         exit;
     }
 

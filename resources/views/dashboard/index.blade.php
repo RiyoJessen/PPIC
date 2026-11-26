@@ -26,7 +26,7 @@ $pageTitle = 'Executive Dashboard PPIC';
                 <i class="fas fa-sitemap me-1"></i> Evaluasi Formula &amp; BOM Kimia
             </a>
             <a href="/master/materials" class="btn btn-primary btn-sm px-3 shadow-sm">
-                <i class="fas fa-flask me-1"></i> Master Material &amp; Safety Stock
+                <i class="fas fa-flask me-1"></i> Master Material &amp; Minimum Stok
             </a>
         <?php endif; ?>
     </div>
@@ -56,7 +56,7 @@ $pageTitle = 'Executive Dashboard PPIC';
             <div class="card-body">
                 <div class="text-muted small fw-semibold">Bahan Status Kritis</div>
                 <div class="fs-4 fw-bold text-dark mt-1"><?= (int)$kritis_count ?></div>
-                <small class="text-muted">Stok tersedia &le; safety stock</small>
+                <small class="text-muted">Stok kosong atau di bawah 50% minimum</small>
             </div>
         </div>
     </div>
@@ -67,7 +67,7 @@ $pageTitle = 'Executive Dashboard PPIC';
             <div class="card-body">
                 <div class="text-muted small fw-semibold">Bahan Status Waspada</div>
                 <div class="fs-4 fw-bold text-dark mt-1"><?= (int)$waspada_count ?></div>
-                <small class="text-muted">Mendekati Reorder Point (ROP)</small>
+                <small class="text-muted">Stok mencapai minimum stok</small>
             </div>
         </div>
     </div>
@@ -133,11 +133,11 @@ $pageTitle = 'Executive Dashboard PPIC';
 
 <!-- Charts Row -->
 <div class="row g-3 mb-4">
-    <!-- Bar Chart: Bahan Kritis vs Safety Stock -->
+    <!-- Bar Chart: Stok tersedia dibanding minimum stok -->
     <div class="col-12">
         <div class="card border-0 shadow-sm h-100">
             <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                <span class="fw-bold"><i class="fas fa-chart-bar me-2 text-primary"></i>Stok Tersedia vs Safety Stock</span>
+                <span class="fw-bold"><i class="fas fa-chart-bar me-2 text-primary"></i>Stok Tersedia vs Minimum Stok</span>
                 <span class="badge bg-light text-muted border">Satuan /ton</span>
             </div>
             <div class="card-body">
@@ -261,15 +261,15 @@ $pageTitle = 'Executive Dashboard PPIC';
 <!-- Chart initialization scripts -->
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Bar Chart: Stok Tersedia vs Safety Stock
+    // 1. Bar Chart: Stok Tersedia vs Minimum Stok
     <?php
     $labels = [];
     $availData = [];
-    $safetyData = [];
+    $minimumData = [];
     foreach (array_slice($materials, 0, 8) as $m) {
         $labels[] = $m['code'];
         $availData[] = $m['available_stock'];
-        $safetyData[] = $m['safety_stock'];
+        $minimumData[] = $m['minimum_stock'];
     }
     ?>
     const barCtx = document.getElementById('stockComparisonChart').getContext('2d');
@@ -285,8 +285,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     borderRadius: 4,
                 },
                 {
-                    label: 'Safety Stock Minimum',
-                    data: <?= json_encode($safetyData) ?>,
+                    label: 'Minimum Stok',
+                    data: <?= json_encode($minimumData) ?>,
                     backgroundColor: 'rgba(239, 68, 68, 0.75)',
                     borderRadius: 4,
                 }

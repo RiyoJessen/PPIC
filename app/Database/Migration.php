@@ -62,11 +62,11 @@ class Migration
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             code TEXT UNIQUE NOT NULL,
             name TEXT NOT NULL,
+            material_name TEXT,
+            minimum_stock_note TEXT,
             category_id INTEGER,
             unit TEXT NOT NULL,
             min_stock REAL DEFAULT 0,
-            safety_stock REAL DEFAULT 0,
-            reorder_point REAL DEFAULT 0,
             lead_time_days INTEGER DEFAULT 7,
             moq REAL DEFAULT 0,
             order_multiple REAL DEFAULT 1,
@@ -79,6 +79,16 @@ class Migration
             FOREIGN KEY (category_id) REFERENCES categories(id),
             FOREIGN KEY (preferred_supplier_id) REFERENCES suppliers(id),
             FOREIGN KEY (warehouse_id) REFERENCES warehouses(id)
+        );
+
+        CREATE TABLE IF NOT EXISTS material_suppliers (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            material_id INTEGER NOT NULL,
+            supplier_id INTEGER,
+            material_specification TEXT,
+            lead_time_days INTEGER NOT NULL DEFAULT 0,
+            FOREIGN KEY (material_id) REFERENCES materials(id) ON DELETE CASCADE,
+            FOREIGN KEY (supplier_id) REFERENCES suppliers(id) ON DELETE SET NULL
         );
 
         CREATE TABLE IF NOT EXISTS products (
@@ -267,6 +277,9 @@ class Migration
 SQL;
 
         Database::getConnection()->exec($schema);
+        self::ensureMaterialSpecificationColumn();
+        self::ensureMaterialSuppliersTable();
+        self::removeLegacyMaterialThresholdColumns();
         self::removeLegacyPurchasingSchema();
     }
 
@@ -314,11 +327,11 @@ SQL;
             id INT AUTO_INCREMENT PRIMARY KEY,
             code VARCHAR(50) UNIQUE NOT NULL,
             name VARCHAR(200) NOT NULL,
+            material_name VARCHAR(300),
+            minimum_stock_note VARCHAR(50),
             category_id INT,
             unit VARCHAR(30) NOT NULL,
             min_stock DECIMAL(12,2) DEFAULT 0,
-            safety_stock DECIMAL(12,2) DEFAULT 0,
-            reorder_point DECIMAL(12,2) DEFAULT 0,
             lead_time_days INT DEFAULT 7,
             moq DECIMAL(12,2) DEFAULT 0,
             order_multiple DECIMAL(12,2) DEFAULT 1,
@@ -331,6 +344,18 @@ SQL;
             FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL,
             FOREIGN KEY (preferred_supplier_id) REFERENCES suppliers(id) ON DELETE SET NULL,
             FOREIGN KEY (warehouse_id) REFERENCES warehouses(id) ON DELETE SET NULL
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+        CREATE TABLE IF NOT EXISTS material_suppliers (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            material_id INT NOT NULL,
+            supplier_id INT NULL,
+            material_specification VARCHAR(300),
+            lead_time_days INT NOT NULL DEFAULT 0,
+            INDEX idx_material_suppliers_material (material_id),
+            INDEX idx_material_suppliers_supplier (supplier_id),
+            FOREIGN KEY (material_id) REFERENCES materials(id) ON DELETE CASCADE,
+            FOREIGN KEY (supplier_id) REFERENCES suppliers(id) ON DELETE SET NULL
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
         CREATE TABLE IF NOT EXISTS products (
@@ -526,7 +551,109 @@ SQL;
                 Database::getConnection()->exec($stmt);
             }
         }
+        self::ensureMaterialSpecificationColumn();
+        self::ensureMaterialSuppliersTable();
+        self::removeLegacyMaterialThresholdColumns();
         self::removeLegacyPurchasingSchema();
+    }
+
+    private static function ensureMaterialSpecificationColumn(): void
+    {
+        if (AppConfig::getDbDriver() === 'mysql') {
+            foreach ([
+                'material_name' => 'VARCHAR(300) NULL',
+                'minimum_stock_note' => 'VARCHAR(50) NULL',
+            ] as $name => $definition) {
+                $column = Database::selectOne("
+                    SELECT COUNT(*) AS column_count
+                    FROM information_schema.COLUMNS
+                    WHERE TABLE_SCHEMA = DATABASE()
+                      AND TABLE_NAME = 'materials'
+                      AND COLUMN_NAME = :column_name
+                ", ['column_name' => $name]);
+                if ((int) ($column['column_count'] ?? 0) === 0) {
+                    Database::statement("ALTER TABLE materials ADD COLUMN {$name} {$definition}");
+                }
+            }
+            return;
+        }
+
+        $columns = Database::select('PRAGMA table_info(materials)');
+        $existing = array_fill_keys(array_column($columns, 'name'), true);
+        if (!isset($existing['material_name'])) {
+            Database::statement('ALTER TABLE materials ADD COLUMN material_name TEXT');
+        }
+        if (!isset($existing['minimum_stock_note'])) {
+            Database::statement('ALTER TABLE materials ADD COLUMN minimum_stock_note TEXT');
+        }
+    }
+
+    private static function ensureMaterialSuppliersTable(): void
+    {
+        if (AppConfig::getDbDriver() === 'mysql') {
+            Database::statement("
+                CREATE TABLE IF NOT EXISTS material_suppliers (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    material_id INT NOT NULL,
+                    supplier_id INT NULL,
+                    material_specification VARCHAR(300),
+                    lead_time_days INT NOT NULL DEFAULT 0,
+                    INDEX idx_material_suppliers_material (material_id),
+                    INDEX idx_material_suppliers_supplier (supplier_id),
+                    FOREIGN KEY (material_id) REFERENCES materials(id) ON DELETE CASCADE,
+                    FOREIGN KEY (supplier_id) REFERENCES suppliers(id) ON DELETE SET NULL
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            ");
+            return;
+        }
+
+        Database::statement("
+            CREATE TABLE IF NOT EXISTS material_suppliers (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                material_id INTEGER NOT NULL,
+                supplier_id INTEGER,
+                material_specification TEXT,
+                lead_time_days INTEGER NOT NULL DEFAULT 0,
+                FOREIGN KEY (material_id) REFERENCES materials(id) ON DELETE CASCADE,
+                FOREIGN KEY (supplier_id) REFERENCES suppliers(id) ON DELETE SET NULL
+            )
+        ");
+    }
+
+    private static function removeLegacyMaterialThresholdColumns(): void
+    {
+        $columns = [];
+        if (AppConfig::getDbDriver() === 'mysql') {
+            $columns = Database::select("
+                SELECT COLUMN_NAME AS name
+                FROM information_schema.COLUMNS
+                WHERE TABLE_SCHEMA = DATABASE()
+                  AND TABLE_NAME = 'materials'
+                  AND COLUMN_NAME IN ('safety_stock', 'reorder_point')
+            ");
+        } else {
+            $columns = Database::select('PRAGMA table_info(materials)');
+            $columns = array_values(array_filter(
+                $columns,
+                static fn(array $column): bool => in_array($column['name'] ?? '', ['safety_stock', 'reorder_point'], true)
+            ));
+        }
+
+        $existing = array_fill_keys(array_column($columns, 'name'), true);
+        if (isset($existing['reorder_point'])) {
+            Database::statement("
+                UPDATE materials
+                SET min_stock = reorder_point
+                WHERE COALESCE(min_stock, 0) = 0
+                  AND COALESCE(reorder_point, 0) > 0
+            ");
+        }
+
+        foreach (['safety_stock', 'reorder_point'] as $column) {
+            if (isset($existing[$column])) {
+                Database::statement("ALTER TABLE materials DROP COLUMN {$column}");
+            }
+        }
     }
 
     private static function removeLegacyPurchasingSchema(): void
