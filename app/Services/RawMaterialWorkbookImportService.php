@@ -9,6 +9,11 @@ use ZipArchive;
 
 class RawMaterialWorkbookImportService
 {
+    public static function readWorkbookSheets(string $path): array
+    {
+        return self::readXlsxSheets($path);
+    }
+
     public static function import(string $leadTimePath, ?string $usagePath, int $userId): array
     {
         $leadRows = self::readLeadTimeWorkbook($leadTimePath);

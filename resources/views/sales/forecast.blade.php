@@ -5,6 +5,12 @@ if (!in_array($activeSection, ['needs', 'history'], true)) {
 }
 $pageTitle = 'Pusat Kebutuhan & Forecast PPIC';
 $monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+$monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+$selectedForecastMonth = isset($period_start, $period_end)
+    && $period_start === $period_end
+    && preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $period_start)
+    ? $period_start
+    : '';
 $sectionSalesHistories = $activeSection === 'needs'
     ? $needs_histories
     : $sales_histories;
@@ -35,35 +41,6 @@ $sectionSalesHistories = $activeSection === 'needs'
 </div>
 
 <?php if ($activeSection === 'needs'): ?>
-    <div class="row g-2 mb-3">
-        <div class="col-12 col-sm-4">
-            <div class="card h-100">
-                <div class="card-body p-2 px-3">
-                    <div class="text-muted small"><i class="fas fa-clipboard-list me-1"></i></div>
-                    <div class="fs-5 fw-bold text-dark"><?= number_format((int)$needs_summary['total_requests'], 0, ',', '.') ?></div>
-                    <div class="text-muted small">Total Permintaan</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-12 col-sm-4">
-            <div class="card h-100">
-                <div class="card-body p-2 px-3">
-                    <div class="text-muted small"><i class="fas fa-cube me-1"></i></div>
-                    <div class="fs-5 fw-bold text-dark"><?= number_format((int)$needs_summary['product_types'], 0, ',', '.') ?></div>
-                    <div class="text-muted small">Jenis Produk</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-12 col-sm-4">
-            <div class="card h-100">
-                <div class="card-body p-2 px-3">
-                    <div class="text-muted small"><i class="fas fa-users me-1"></i></div>
-                    <div class="fs-5 fw-bold text-dark"><?= number_format((int)$needs_summary['customers'], 0, ',', '.') ?></div>
-                    <div class="text-muted small">Customer</div>
-                </div>
-            </div>
-        </div>
-    </div>
     <div class="card mb-4">
         <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
             <div>
@@ -84,6 +61,9 @@ $sectionSalesHistories = $activeSection === 'needs'
                 <button class="btn btn-outline-dark btn-sm" data-bs-toggle="modal" data-bs-target="#modalManualForecast">
                     <i class="fas fa-calendar-edit me-1"></i> Input Forecast
                 </button>
+                <button class="btn btn-outline-success btn-sm" data-bs-toggle="modal" data-bs-target="#modalImportForecast">
+                    <i class="fas fa-file-excel me-1"></i> Upload Forecast Excel
+                </button>
             </div>
         </div>
     </div>
@@ -92,51 +72,90 @@ $sectionSalesHistories = $activeSection === 'needs'
 <?php if ($activeSection === 'needs'): ?>
 <div class="card border-0 shadow-sm mb-4">
     <div class="card-header bg-white py-3">
-        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
-            <div>
-                <span class="fw-bold"><i class="fas fa-table-list text-primary me-2"></i>Daftar Kebutuhan Sales &amp; Forecast</span>
-                <div class="small text-muted">Quotation/SO adalah permintaan pelanggan; Forecast adalah prediksi model.</div>
+        <div class="d-flex justify-content-between align-items-center gap-2 mb-3">
+            <span class="fw-bold"><i class="fas fa-calendar-days text-primary me-2"></i>Periode Forecast</span>
+            <span class="badge rounded-pill bg-primary-subtle text-primary"><?= (int)$year ?></span>
+        </div>
+        <nav class="d-flex flex-nowrap gap-2 overflow-auto pb-1" aria-label="Pilih bulan forecast">
+            <?php if (empty($available_forecast_months)): ?>
+                <span class="small text-muted">Belum ada data forecast untuk tahun <?= (int)$year ?>.</span>
+            <?php endif; ?>
+            <?php foreach ($available_forecast_months as $monthValue): ?>
+                <?php
+                    $monthIndex = (int) substr($monthValue, 5, 2) - 1;
+                    $monthLabel = $monthLabels[$monthIndex] ?? '';
+                    $monthQuery = [
+                        'section' => 'needs',
+                        'year' => (int)$year,
+                        'period_start' => $monthValue,
+                        'period_end' => $monthValue,
+                        'source' => $source_filter,
+                    ];
+                    if ($search !== '') {
+                        $monthQuery['search'] = $search;
+                    }
+                ?>
+                <a href="/forecast-sales?<?= htmlspecialchars(http_build_query($monthQuery), ENT_QUOTES, 'UTF-8') ?>"
+                    class="btn btn-sm rounded-pill px-3 flex-shrink-0 <?= $selectedForecastMonth === $monthValue ? 'btn-primary' : 'btn-light text-muted' ?>">
+                    <?= htmlspecialchars($monthLabel) ?>
+                </a>
+            <?php endforeach; ?>
+        </nav>
+    </div>
+    <div class="card-body border-bottom py-3">
+        <div class="row g-3">
+            <div class="col-6 col-md-6">
+                <div class="small text-muted">Jumlah Data</div>
+                <div class="fs-5 fw-semibold text-dark"><?= number_format((int)$combined_total, 0, ',', '.') ?></div>
             </div>
-            <span class="badge bg-light text-dark border"><?= number_format((int)$combined_total, 0, ',', '.') ?> data</span>
+            <div class="col-6 col-md-6">
+                <div class="small text-muted">Sumber Data</div>
+                <div class="fw-semibold text-dark">
+                    <?php if ($source_filter === 'forecast'): ?>
+                        Forecast
+                    <?php elseif ($source_filter === 'sales'): ?>
+                        Kebutuhan Sales
+                    <?php else: ?>
+                        Forecast &amp; Kebutuhan Sales
+                    <?php endif; ?>
+                </div>
+                <div class="small text-muted">
+                    <?= $selectedForecastMonth !== ''
+                        ? htmlspecialchars($monthNames[(int)substr($selectedForecastMonth, 5, 2) - 1] . ' ' . substr($selectedForecastMonth, 0, 4))
+                        : 'Semua periode yang sesuai filter' ?>
+                </div>
+            </div>
         </div>
     </div>
-    <div class="px-3 py-3 bg-light border-bottom">
-        <form method="GET" action="/forecast-sales" class="row g-2 align-items-end">
+    <div class="px-3 py-3">
+        <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+            <span class="fw-semibold">Daftar Forecast<?= $selectedForecastMonth !== '' ? ' ' . htmlspecialchars($monthNames[(int)substr($selectedForecastMonth, 5, 2) - 1] . ' ' . substr($selectedForecastMonth, 0, 4)) : '' ?></span>
+            <span class="small text-muted"><?= number_format((int)$combined_total, 0, ',', '.') ?> data</span>
+        </div>
+        <form method="GET" action="/forecast-sales" class="row g-2">
             <input type="hidden" name="section" value="needs">
-            <div class="col-6 col-md-2">
-                <label for="combinedSource" class="form-label small fw-semibold mb-1">Sumber</label>
+            <input type="hidden" name="year" value="<?= (int)$year ?>">
+            <?php if (!empty($period_start)): ?>
+                <input type="hidden" name="period_start" value="<?= htmlspecialchars($period_start) ?>">
+            <?php endif; ?>
+            <?php if (!empty($period_end)): ?>
+                <input type="hidden" name="period_end" value="<?= htmlspecialchars($period_end) ?>">
+            <?php endif; ?>
+            <div class="col-12 col-md-8">
+                <label for="combinedSearch" class="visually-hidden">Cari nomor atau nama material</label>
+                <input type="search" id="combinedSearch" name="search" class="form-control form-control-sm rounded-pill" value="<?= htmlspecialchars($search) ?>" placeholder="Cari nomor atau nama material...">
+            </div>
+            <div class="col-7 col-md-2">
+                <label for="combinedSource" class="visually-hidden">Sumber data</label>
                 <select id="combinedSource" name="source" class="form-select form-select-sm">
-                    <option value="all" <?= $source_filter === 'all' ? 'selected' : '' ?>>Semua</option>
-                    <option value="sales" <?= $source_filter === 'sales' ? 'selected' : '' ?>>Kebutuhan Sales</option>
+                    <option value="all" <?= $source_filter === 'all' ? 'selected' : '' ?>>Semua sumber data</option>
                     <option value="forecast" <?= $source_filter === 'forecast' ? 'selected' : '' ?>>Forecast</option>
+                    <option value="sales" <?= $source_filter === 'sales' ? 'selected' : '' ?>>Kebutuhan Sales</option>
                 </select>
             </div>
-            <div class="col-6 col-md-2">
-                <label for="periodStart" class="form-label small fw-semibold mb-1">Periode Mulai</label>
-                <input type="month" id="periodStart" name="period_start" class="form-control form-control-sm" value="<?= htmlspecialchars($period_start ?? '') ?>">
-            </div>
-            <div class="col-6 col-md-2">
-                <label for="periodEnd" class="form-label small fw-semibold mb-1">Periode Akhir</label>
-                <input type="month" id="periodEnd" name="period_end" class="form-control form-control-sm" value="<?= htmlspecialchars($period_end ?? '') ?>">
-            </div>
-            <div class="col-6 col-md-2">
-                <label for="combinedProduct" class="form-label small fw-semibold mb-1">Produk</label>
-                <select id="combinedProduct" name="product_id" class="form-select form-select-sm">
-                    <option value="">Semua Produk</option>
-                    <?php foreach ($products as $product): ?>
-                        <option value="<?= (int)$product['id'] ?>" <?= (int)$selected_product_id === (int)$product['id'] ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($product['code'] . ' — ' . $product['name']) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-            <div class="col-8 col-md-2">
-                <label for="combinedSearch" class="form-label small fw-semibold mb-1">Search</label>
-                <input type="search" id="combinedSearch" name="search" class="form-control form-control-sm" value="<?= htmlspecialchars($search) ?>" placeholder="Produk, pelanggan, ID...">
-            </div>
-            <div class="col-4 col-md-2 d-flex gap-1">
-                <button type="submit" class="btn btn-primary btn-sm flex-grow-1"><i class="fas fa-filter me-1"></i>Filter</button>
-                <a href="/forecast-sales?section=needs" class="btn btn-outline-secondary btn-sm" title="Reset filter"><i class="fas fa-rotate-left"></i></a>
+            <div class="col-5 col-md-2 d-flex gap-1">
+                <button type="submit" class="btn btn-primary btn-sm flex-grow-1" title="Cari"><i class="fas fa-magnifying-glass"></i></button>
+                <a href="/forecast-sales?section=needs&year=<?= (int)$year ?>" class="btn btn-outline-secondary btn-sm" title="Reset filter"><i class="fas fa-rotate-left"></i></a>
             </div>
         </form>
     </div>
@@ -144,25 +163,21 @@ $sectionSalesHistories = $activeSection === 'needs'
         <table class="table table-hover align-middle mb-0 small" id="combinedNeedsTable">
             <thead class="table-light">
                 <tr>
-                    <th>ID Kebutuhan</th>
-                    <th>Nama Produk</th>
-                    <th class="text-end">Jumlah Kebutuhan</th>
-                    <th>Periode/Tanggal</th>
-                    <th>Sumber Kebutuhan</th>
-                    <th>Status</th>
-                    <th class="text-center">Aksi/Detail</th>
+                    <th>Nomor Material</th>
+                    <th>Nama Material</th>
+                    <th class="text-end">Forecast</th>
+                    <th class="text-center">Aksi</th>
                 </tr>
             </thead>
             <tbody>
                 <?php if (empty($combined_rows)): ?>
-                    <tr><td colspan="7" class="text-center text-muted py-4">Tidak ada data yang sesuai dengan filter.</td></tr>
+                    <tr><td colspan="4" class="text-center text-muted py-4">Tidak ada data yang sesuai dengan filter.</td></tr>
                 <?php else: ?>
                     <?php foreach ($combined_rows as $row): ?>
                         <tr>
-                            <td class="font-monospace fw-semibold <?= $row['source'] === 'forecast' ? 'text-success' : 'text-primary' ?>"><?= htmlspecialchars($row['display_id']) ?></td>
+                            <td class="font-monospace"><?= htmlspecialchars($row['product_code']) ?></td>
                             <td>
                                 <div class="fw-semibold text-dark"><?= htmlspecialchars($row['product_name']) ?></div>
-                                <small class="text-muted font-monospace"><?= htmlspecialchars($row['product_code']) ?></small>
                                 <?php if ($row['source'] === 'sales'): ?>
                                     <div class="small text-muted"><?= htmlspecialchars($row['customer_name']) ?></div>
                                 <?php endif; ?>
@@ -170,47 +185,20 @@ $sectionSalesHistories = $activeSection === 'needs'
                             <td class="text-end font-monospace fw-bold text-nowrap">
                                 <?= number_format((float)$row['quantity'], 0, ',', '.') ?> <?= htmlspecialchars($row['product_unit']) ?>
                             </td>
-                            <td class="font-monospace text-nowrap">
-                                <?php if ($row['source'] === 'sales'): ?>
-                                    <?= htmlspecialchars(date('d-m-Y', strtotime($row['date']))) ?>
-                                    <div class="small text-muted"><?= htmlspecialchars($row['period']) ?></div>
-                                <?php else: ?>
-                                    <?= htmlspecialchars($row['period']) ?>
-                                <?php endif; ?>
-                            </td>
-                            <td>
-                                <?php if ($row['source'] === 'forecast'): ?>
-                                    <span class="badge bg-success-subtle text-success border"><i class="fas fa-chart-line me-1"></i>Forecast</span>
-                                <?php else: ?>
-                                    <span class="badge bg-primary-subtle text-primary border"><i class="fas fa-file-signature me-1"></i>Kebutuhan Sales</span>
-                                <?php endif; ?>
-                            </td>
-                            <td>
-                                <?php if ($row['source'] === 'forecast'): ?>
-                                    <span class="badge bg-success-subtle text-success border">Prediksi</span>
-                                <?php elseif ($row['status'] === 'quotation'): ?>
-                                    <span class="badge bg-warning-subtle text-warning-emphasis border">Quotation</span>
-                                <?php elseif ($row['status'] === 'confirmed_so'): ?>
-                                    <span class="badge bg-primary-subtle text-primary border">Sales Order (SO)</span>
-                                <?php elseif ($row['doc_type'] === 'sales_order'): ?>
-                                    <span class="badge bg-secondary-subtle text-secondary border">SO Selesai</span>
-                                <?php elseif ($row['doc_type'] === 'quotation'): ?>
-                                    <span class="badge bg-secondary-subtle text-secondary border">Quotation Selesai</span>
-                                <?php else: ?>
-                                    <span class="badge bg-secondary-subtle text-secondary border">Selesai</span>
-                                <?php endif; ?>
-                            </td>
                             <td class="text-center">
                                 <div class="d-flex justify-content-center align-items-center gap-1">
                                     <details class="text-start">
                                         <summary class="btn btn-outline-secondary btn-sm py-1">Detail</summary>
                                         <div class="position-absolute bg-white border rounded shadow p-2 text-start small" style="z-index: 5; min-width: 240px; max-width: 320px;">
                                             <?php if ($row['source'] === 'forecast'): ?>
+                                                <div><strong>Nomor material:</strong> <?= htmlspecialchars($row['product_code']) ?></div>
+                                                <div><strong>Periode:</strong> <?= htmlspecialchars($row['period']) ?></div>
                                                 <div><strong>Model:</strong> <?= htmlspecialchars($row['method']) ?></div>
-                                                <div><strong>Periode model:</strong> <?= htmlspecialchars($row['period']) ?></div>
                                                 <div><strong>Catatan:</strong> <?= htmlspecialchars($row['notes'] ?: 'Tidak ada catatan.') ?></div>
                                             <?php else: ?>
                                                 <div><strong>Dokumen:</strong> <?= htmlspecialchars($row['display_id']) ?></div>
+                                                <div><strong>Nomor material:</strong> <?= htmlspecialchars($row['product_code']) ?></div>
+                                                <div><strong>Periode:</strong> <?= htmlspecialchars($row['period']) ?></div>
                                                 <div><strong>Jenis:</strong> <?= $row['doc_type'] === 'sales_order' ? 'Sales Order (SO)' : 'Quotation' ?></div>
                                                 <div><strong>Pelanggan:</strong> <?= htmlspecialchars($row['customer_name']) ?></div>
                                                 <div><strong>Total nilai:</strong> Rp <?= number_format((float)$row['total_amount'], 0, ',', '.') ?></div>
@@ -529,6 +517,36 @@ $sectionSalesHistories = $activeSection === 'needs'
     </div>
 </div>
 <?php endif; ?>
+
+<div class="modal fade" id="modalImportForecast" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="/forecast-sales/import-xlsx" method="POST" enctype="multipart/form-data">
+                <div class="modal-header">
+                    <h6 class="modal-title fw-bold"><i class="fas fa-file-excel text-success me-2"></i>Upload Forecast Excel</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="forecastImportYear" class="form-label small fw-semibold">Tahun Forecast</label>
+                        <input type="number" id="forecastImportYear" name="forecast_year" class="form-control form-control-sm" min="2000" max="2100" value="<?= (int)$year ?>" required>
+                    </div>
+                    <div class="mb-2">
+                        <label for="forecastImportFile" class="form-label small fw-semibold">File Excel (.xlsx)</label>
+                        <input type="file" id="forecastImportFile" name="forecast_file" class="form-control form-control-sm" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required>
+                    </div>
+                    <div class="small text-muted">
+                        Satu sheet untuk setiap bulan, dengan nama sheet berupa nama bulan (contoh: Mei). Baris pertama berisi kolom <strong>Nomor Material</strong>, <strong>Nama Material</strong>, dan <strong>Forecast</strong>. Nomor material harus sudah terdaftar di master Produk Jadi. Nilai bulan yang tidak diunggah tetap dipertahankan.
+                    </div>
+                </div>
+                <div class="modal-footer py-2">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-success btn-sm"><i class="fas fa-upload me-1"></i>Impor Forecast</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 <!-- Modal Input Data Sales / Quotation / SO -->
 <div class="modal fade" id="modalAddSales" tabindex="-1" aria-hidden="true">

@@ -194,6 +194,36 @@ try {
         exit;
     }
 
+    if ($uri === '/forecast-sales/import-xlsx' && $method === 'POST') {
+        $yr = (int) ($_POST['forecast_year'] ?? 0);
+        $upload = $_FILES['forecast_file'] ?? null;
+        try {
+            if (!is_array($upload) || (int) ($upload['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+                throw new \InvalidArgumentException('Pilih file Excel forecast yang valid untuk diunggah.');
+            }
+            if (strtolower(pathinfo((string) ($upload['name'] ?? ''), PATHINFO_EXTENSION)) !== 'xlsx') {
+                throw new \InvalidArgumentException('Format file tidak didukung. Unggah file Excel .xlsx.');
+            }
+            if ((int) ($upload['size'] ?? 0) > 10 * 1024 * 1024) {
+                throw new \InvalidArgumentException('Ukuran file maksimal 10 MB.');
+            }
+
+            $result = \App\Services\SalesForecastWorkbookImportService::import(
+                (string) $upload['tmp_name'],
+                $yr,
+                (int) $_SESSION['user_id']
+            );
+            $_SESSION['flash_success'] = "Berhasil mengimpor forecast {$yr} untuk {$result['products']} produk pada bulan " . implode(', ', $result['months']) . '.';
+        } catch (\InvalidArgumentException $e) {
+            $_SESSION['flash_error'] = $e->getMessage();
+        } catch (\Throwable $e) {
+            error_log('Gagal mengimpor workbook forecast: ' . $e->getMessage());
+            $_SESSION['flash_error'] = 'Impor forecast gagal karena terjadi kesalahan. Pastikan workbook Excel sesuai format dan coba lagi.';
+        }
+        header("Location: /forecast-sales?year={$yr}&section=needs");
+        exit;
+    }
+
     if ($uri === '/forecast-sales/download-template') {
         header('Content-Type: text/csv');
         header('Content-Disposition: attachment; filename="template_data_penjualan_dkj.csv"');

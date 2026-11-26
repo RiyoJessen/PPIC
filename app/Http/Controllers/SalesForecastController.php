@@ -44,7 +44,11 @@ class SalesForecastController extends Controller
         $needsProductId = $needsProductId !== null && $needsProductId > 0 ? $needsProductId : null;
         $historyProductId = $historyProductId !== null && $historyProductId > 0 ? $historyProductId : null;
         $selectedProductId = $selectedProductId !== null && $selectedProductId > 0 ? $selectedProductId : null;
-        $sourceFilter = in_array($sourceFilter, ['sales', 'forecast'], true) ? $sourceFilter : 'all';
+        $sourceFilter = in_array($sourceFilter, ['all', 'sales', 'forecast'], true) ? $sourceFilter : 'forecast';
+        if ($periodStart === null && $periodEnd === null) {
+            $periodStart = sprintf('%04d-01', $year);
+            $periodEnd = sprintf('%04d-12', $year);
+        }
         $search = trim((string) $search);
         $search = $search !== '' ? substr($search, 0, 100) : '';
         $page = max(1, $page ?? 1);
@@ -122,15 +126,6 @@ class SalesForecastController extends Controller
             LIMIT 50
         ", $needsParams);
 
-        $needsSummary = Database::selectOne("
-            SELECT
-                COUNT(*) as total_requests,
-                COUNT(DISTINCT product_id) as product_types,
-                COUNT(DISTINCT customer_name) as customers
-            FROM sales_histories
-            WHERE status IN ('quotation', 'confirmed_so')
-        ") ?? [];
-
         $combinedRows = [];
         $salesConditions = ["(sh.doc_type IN ('quotation', 'sales_order') OR sh.status IN ('quotation', 'confirmed_so'))"];
         $salesParams = [];
@@ -181,6 +176,35 @@ class SalesForecastController extends Controller
             JOIN products p ON p.id = sf.product_id
             ORDER BY sf.forecast_year DESC, sf.id DESC
         ");
+        $availableForecastMonths = [];
+        if ($sourceFilter !== 'sales') {
+            foreach ($allForecasts as $forecast) {
+                if ((int) $forecast['forecast_year'] !== $year) {
+                    continue;
+                }
+                for ($month = 1; $month <= 12; $month++) {
+                    if ((float) ($forecast['m' . $month] ?? 0) > 0) {
+                        $availableForecastMonths[sprintf('%04d-%02d', $year, $month)] = true;
+                    }
+                }
+            }
+        }
+        if ($sourceFilter !== 'forecast') {
+            $availableSalesMonths = Database::select("
+                SELECT DISTINCT sh.sale_month
+                FROM sales_histories sh
+                WHERE (sh.doc_type IN ('quotation', 'sales_order') OR sh.status IN ('quotation', 'confirmed_so'))
+                  AND sh.sale_month >= :year_start
+                  AND sh.sale_month <= :year_end
+            ", ['year_start' => sprintf('%04d-01', $year), 'year_end' => sprintf('%04d-12', $year)]);
+            foreach ($availableSalesMonths as $availableSalesMonth) {
+                $period = (string) $availableSalesMonth['sale_month'];
+                if (preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $period)) {
+                    $availableForecastMonths[$period] = true;
+                }
+            }
+        }
+        ksort($availableForecastMonths);
         $evaluationForecasts = [];
         foreach ($allForecasts as $forecast) {
             if ($selectedProductId !== null && (int) $forecast['product_id'] !== $selectedProductId) {
@@ -210,7 +234,7 @@ class SalesForecastController extends Controller
                 ];
                 $evaluationForecasts[] = $forecastRow;
 
-                if ($sourceFilter !== 'sales' && (
+                if ($forecastRow['quantity'] > 0 && $sourceFilter !== 'sales' && (
                     $search === ''
                     || stripos((string) $forecastRow['product_code'], $search) !== false
                     || stripos((string) $forecastRow['product_name'], $search) !== false
@@ -347,16 +371,12 @@ class SalesForecastController extends Controller
                 'transaction_count' => (int) ($historySummary['transaction_count'] ?? 0),
                 'total_sales_tons' => (float) ($historySummary['total_sales_tons'] ?? 0),
             ],
-            'needs_summary' => [
-                'total_requests' => (int) ($needsSummary['total_requests'] ?? 0),
-                'product_types' => (int) ($needsSummary['product_types'] ?? 0),
-                'customers' => (int) ($needsSummary['customers'] ?? 0),
-            ],
             'open_quotation_so' => (int) ($salesSummary['open_quotation_so'] ?? 0),
             'combined_rows' => $paginatedCombinedRows,
             'combined_total' => $combinedTotal,
             'combined_page' => $page,
             'combined_last_page' => $combinedLastPage,
+            'available_forecast_months' => array_keys($availableForecastMonths),
             'source_filter' => $sourceFilter,
             'period_start' => $periodStart,
             'period_end' => $periodEnd,
