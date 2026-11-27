@@ -214,7 +214,10 @@ try {
                 $yr,
                 (int) $_SESSION['user_id']
             );
-            $_SESSION['flash_success'] = "Berhasil mengimpor forecast {$yr} untuk {$result['products']} produk pada bulan " . implode(', ', $result['months']) . '.';
+            $newProducts = (int) ($result['created_products'] ?? 0);
+            $_SESSION['flash_success'] = "Berhasil mengimpor forecast {$yr} untuk {$result['products']} produk pada bulan "
+                .implode(', ', $result['months']).'. '
+                .($newProducts > 0 ? "{$newProducts} produk baru juga dibuat dari data Excel." : '');
         } catch (\InvalidArgumentException $e) {
             $_SESSION['flash_error'] = $e->getMessage();
         } catch (\Throwable $e) {

@@ -54,43 +54,64 @@ class SalesForecastWorkbookImportService
         $monthRows = self::parseWorkbookSheets($sheets);
 
         $productsByCode = [];
-        $missingCodes = [];
+        $productNamesByCode = [];
         foreach ($monthRows as $rows) {
             foreach ($rows as $row) {
                 $code = $row['code'];
+                if (isset($productNamesByCode[$code])
+                    && mb_strtolower($productNamesByCode[$code], 'UTF-8') !== mb_strtolower($row['name'], 'UTF-8')) {
+                    throw new InvalidArgumentException(
+                        'Nama produk untuk nomor material '.$code.' berbeda antar sheet. Samakan namanya sebelum impor.'
+                    );
+                }
+                $productNamesByCode[$code] = $row['name'];
                 if (! array_key_exists($code, $productsByCode)) {
                     $productsByCode[$code] = Database::selectOne(
                         'SELECT id FROM products WHERE code = :code',
                         ['code' => $code]
                     );
                 }
-                if (! $productsByCode[$code]) {
-                    $missingCodes[$code] = true;
-                }
-            }
-        }
-        if (! empty($missingCodes)) {
-            $codes = array_slice(array_keys($missingCodes), 0, 10);
-            $suffix = count($missingCodes) > count($codes) ? ', dan lainnya' : '';
-            throw new InvalidArgumentException(
-                'Nomor material berikut tidak ditemukan di master Produk Jadi: '.implode(', ', $codes).$suffix.'.'
-            );
-        }
-
-        $valuesByProduct = [];
-        foreach ($monthRows as $month => $rows) {
-            foreach ($rows as $row) {
-                $productId = (int) $productsByCode[$row['code']]['id'];
-                $valuesByProduct[$productId]['code'] = $row['code'];
-                $valuesByProduct[$productId]['months'][$month] = $row['quantity'];
             }
         }
 
         $monthNumbers = array_map('intval', array_keys($monthRows));
         sort($monthNumbers);
 
+        $createdProducts = 0;
         Database::beginTransaction();
         try {
+            foreach ($productsByCode as $code => $product) {
+                if ($product) {
+                    continue;
+                }
+
+                $productId = Database::insert('products', [
+                    'code' => $code,
+                    'name' => $productNamesByCode[$code],
+                    'category' => 'Belum diklasifikasikan',
+                    'unit' => 'Kg',
+                    'standard_batch_size' => 1000,
+                    'description' => 'Dibuat otomatis dari impor forecast penjualan.',
+                    'is_active' => 1,
+                ]);
+                Database::insert('product_stock_balances', [
+                    'product_id' => $productId,
+                    'current_qty' => 0,
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ]);
+                $productsByCode[$code] = ['id' => $productId];
+                $createdProducts++;
+            }
+
+            $valuesByProduct = [];
+            foreach ($monthRows as $month => $rows) {
+                foreach ($rows as $row) {
+                    $productId = (int) $productsByCode[$row['code']]['id'];
+                    $valuesByProduct[$productId]['code'] = $row['code'];
+                    $valuesByProduct[$productId]['months'][$month] = $row['quantity'];
+                }
+            }
+
             foreach ($valuesByProduct as $productId => $productValues) {
                 $existing = Database::selectOne(
                     'SELECT * FROM sales_forecasts WHERE product_id = :product_id AND forecast_year = :forecast_year',
@@ -129,7 +150,8 @@ class SalesForecastWorkbookImportService
                 'action' => 'IMPORT_SALES_FORECAST_XLSX',
                 'module' => 'Forecast Sales',
                 'description' => 'Mengimpor forecast '.$year.' untuk '.count($valuesByProduct)
-                    .' produk pada bulan '.implode(', ', $importedMonths).'.',
+                    .' produk pada bulan '.implode(', ', $importedMonths).'. '
+                    .$createdProducts.' produk baru dibuat dari file.',
                 'ip_address' => '127.0.0.1',
                 'created_at' => date('Y-m-d H:i:s'),
             ]);
@@ -142,6 +164,7 @@ class SalesForecastWorkbookImportService
 
         return [
             'products' => count($valuesByProduct),
+            'created_products' => $createdProducts,
             'months' => $importedMonths,
         ];
     }

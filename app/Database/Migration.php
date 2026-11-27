@@ -305,6 +305,7 @@ SQL;
 
         Database::getConnection()->exec($schema);
         self::ensureMaterialSpecificationColumn();
+        self::ensureSalesForecastMethodColumn();
         self::ensureFormulaSourceColumns();
         self::ensureMaterialSuppliersTable();
         self::removeLegacyMaterialThresholdColumns();
@@ -607,6 +608,7 @@ SQL;
             }
         }
         self::ensureMaterialSpecificationColumn();
+        self::ensureSalesForecastMethodColumn();
         self::ensureFormulaSourceColumns();
         self::ensureMaterialSuppliersTable();
         self::removeLegacyMaterialThresholdColumns();
@@ -641,6 +643,29 @@ SQL;
         }
         if (!isset($existing['minimum_stock_note'])) {
             Database::statement('ALTER TABLE materials ADD COLUMN minimum_stock_note TEXT');
+        }
+    }
+
+    private static function ensureSalesForecastMethodColumn(): void
+    {
+        if (AppConfig::getDbDriver() === 'mysql') {
+            $column = Database::selectOne("
+                SELECT COUNT(*) AS column_count
+                FROM information_schema.COLUMNS
+                WHERE TABLE_SCHEMA = DATABASE()
+                  AND TABLE_NAME = 'sales_forecasts'
+                  AND COLUMN_NAME = 'method'
+            ");
+            if ((int) ($column['column_count'] ?? 0) === 0) {
+                Database::statement("ALTER TABLE sales_forecasts ADD COLUMN method VARCHAR(30) NOT NULL DEFAULT 'manual'");
+            }
+            return;
+        }
+
+        $columns = Database::select('PRAGMA table_info(sales_forecasts)');
+        $existing = array_fill_keys(array_column($columns, 'name'), true);
+        if (!isset($existing['method'])) {
+            Database::statement("ALTER TABLE sales_forecasts ADD COLUMN method TEXT NOT NULL DEFAULT 'manual'");
         }
     }
 
