@@ -54,7 +54,7 @@ $pageTitle = 'Executive Dashboard PPIC';
     <div class="col-12 col-sm-6 col-xl-3">
         <div class="card h-100">
             <div class="card-body">
-                <div class="text-muted small fw-semibold">Bahan Status Kritis</div>
+                <div class="text-muted small fw-semibold">Stok Darurat</div>
                 <div class="fs-4 fw-bold text-dark mt-1"><?= (int)$kritis_count ?></div>
                 <small class="text-muted">Stok kosong atau di bawah 50% minimum</small>
             </div>
@@ -65,7 +65,7 @@ $pageTitle = 'Executive Dashboard PPIC';
     <div class="col-12 col-sm-6 col-xl-3">
         <div class="card h-100">
             <div class="card-body">
-                <div class="text-muted small fw-semibold">Bahan Status Waspada</div>
+                <div class="text-muted small fw-semibold">Stok Minimum</div>
                 <div class="fs-4 fw-bold text-dark mt-1"><?= (int)$waspada_count ?></div>
                 <small class="text-muted">Stok mencapai minimum stok</small>
             </div>

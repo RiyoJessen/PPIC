@@ -1,8 +1,19 @@
 <?php
 declare(strict_types=1);
 
+// Definisikan helper view custom sebelum Composer dimuat
+if (!function_exists('view')) {
+    function view(string $view, array $data = []): string {
+        return \App\Services\BladeEngine::render($view, $data);
+    }
+}
+
+// Muat Composer autoload
+require_once dirname(__DIR__) . '/vendor/autoload.php';
+
 session_start();
 
+// Autoload classes
 // Autoload classes
 spl_autoload_register(function (string $class): void {
     $prefix = 'App\\';
@@ -20,6 +31,7 @@ spl_autoload_register(function (string $class): void {
         require $file;
     }
 });
+
 
 // Laravel global view() helper function
 if (!function_exists('view')) {
