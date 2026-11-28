@@ -41,6 +41,8 @@ $sectionSalesHistories = $activeSection === 'needs'
 </div>
 
 <?php if ($activeSection === 'needs'): ?>
+
+
     <div class="card mb-4">
         <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
             <div>
@@ -163,6 +165,7 @@ $sectionSalesHistories = $activeSection === 'needs'
         <table class="table table-hover align-middle mb-0 small" id="combinedNeedsTable">
             <thead class="table-light">
                 <tr>
+                    <th class="text-center">No.</th>
                     <th>Nomor Material</th>
                     <th>Nama Material</th>
                     <th class="text-end">Forecast</th>
@@ -171,10 +174,11 @@ $sectionSalesHistories = $activeSection === 'needs'
             </thead>
             <tbody>
                 <?php if (empty($combined_rows)): ?>
-                    <tr><td colspan="4" class="text-center text-muted py-4">Tidak ada data yang sesuai dengan filter.</td></tr>
+                    <tr><td colspan="5" class="text-center text-muted py-4">Tidak ada data yang sesuai dengan filter.</td></tr>
                 <?php else: ?>
-                    <?php foreach ($combined_rows as $row): ?>
+                    <?php foreach ($combined_rows as $rowIndex => $row): ?>
                         <tr>
+                            <td class="text-center text-muted"><?= (($combined_page - 1) * $combined_per_page) + $rowIndex + 1 ?></td>
                             <td class="font-monospace"><?= htmlspecialchars($row['product_code']) ?></td>
                             <td>
                                 <div class="fw-semibold text-dark"><?= htmlspecialchars($row['product_name']) ?></div>
@@ -187,25 +191,7 @@ $sectionSalesHistories = $activeSection === 'needs'
                             </td>
                             <td class="text-center">
                                 <div class="d-flex justify-content-center align-items-center gap-1">
-                                    <details class="text-start">
-                                        <summary class="btn btn-outline-secondary btn-sm py-1">Detail</summary>
-                                        <div class="position-absolute bg-white border rounded shadow p-2 text-start small" style="z-index: 5; min-width: 240px; max-width: 320px;">
-                                            <?php if ($row['source'] === 'forecast'): ?>
-                                                <div><strong>Nomor material:</strong> <?= htmlspecialchars($row['product_code']) ?></div>
-                                                <div><strong>Periode:</strong> <?= htmlspecialchars($row['period']) ?></div>
-                                                <div><strong>Model:</strong> <?= htmlspecialchars($row['method']) ?></div>
-                                                <div><strong>Catatan:</strong> <?= htmlspecialchars($row['notes'] ?: 'Tidak ada catatan.') ?></div>
-                                            <?php else: ?>
-                                                <div><strong>Dokumen:</strong> <?= htmlspecialchars($row['display_id']) ?></div>
-                                                <div><strong>Nomor material:</strong> <?= htmlspecialchars($row['product_code']) ?></div>
-                                                <div><strong>Periode:</strong> <?= htmlspecialchars($row['period']) ?></div>
-                                                <div><strong>Jenis:</strong> <?= $row['doc_type'] === 'sales_order' ? 'Sales Order (SO)' : 'Quotation' ?></div>
-                                                <div><strong>Pelanggan:</strong> <?= htmlspecialchars($row['customer_name']) ?></div>
-                                                <div><strong>Total nilai:</strong> Rp <?= number_format((float)$row['total_amount'], 0, ',', '.') ?></div>
-                                                <div><strong>Catatan:</strong> <?= htmlspecialchars($row['notes'] ?: 'Tidak ada catatan.') ?></div>
-                                            <?php endif; ?>
-                                        </div>
-                                    </details>
+                                    <a href="/forecast-sales/detail?source=<?= urlencode($row['source']) ?>&id=<?= (int)$row['id'] ?>&period=<?= urlencode($row['period']) ?>" class="btn btn-outline-secondary btn-sm py-1">Detail</a>
                                     <?php if ($row['source'] === 'sales'): ?>
                                         <div class="btn-group btn-group-sm">
                                             <?php if ($row['status'] === 'quotation'): ?>
@@ -224,7 +210,6 @@ $sectionSalesHistories = $activeSection === 'needs'
                     <?php endforeach; ?>
                 <?php endif; ?>
             </tbody>
-        </table>
     </div>
     <?php if ($combined_last_page > 1): ?>
         <div class="card-footer bg-white d-flex flex-wrap justify-content-between align-items-center gap-2">
@@ -243,54 +228,15 @@ $sectionSalesHistories = $activeSection === 'needs'
     <?php endif; ?>
 </div>
 
-<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end gap-2 mb-2">
-    <div>
-        <h6 class="fw-bold text-dark mb-1"><i class="fas fa-scale-balanced text-primary me-2"></i>Evaluasi Forecast vs Realisasi</h6>
-        <div class="small text-muted">Realisasi dihitung dari Sales Order dan penjualan yang selesai; Quotation tidak dihitung sebagai realisasi.</div>
-    </div>
-    <span class="small text-muted">Selisih = Forecast − Realisasi; error = |selisih| ÷ nilai terbesar</span>
-</div>
-<div class="row g-2 mb-3">
-    <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body p-3"><div class="small text-muted">Total Forecast</div><div class="fs-5 fw-bold text-success"><?= number_format((float)$evaluation_summary['forecast_total'], 0, ',', '.') ?></div></div></div></div>
-    <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body p-3"><div class="small text-muted">Total Realisasi</div><div class="fs-5 fw-bold text-primary"><?= number_format((float)$evaluation_summary['realization_total'], 0, ',', '.') ?></div></div></div></div>
-    <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body p-3"><div class="small text-muted">Total Selisih</div><div class="fs-5 fw-bold <?= $evaluation_summary['difference_total'] > 0 ? 'text-danger' : ($evaluation_summary['difference_total'] < 0 ? 'text-warning-emphasis' : 'text-success') ?>"><?= number_format((float)$evaluation_summary['difference_total'], 0, ',', '.') ?></div></div></div></div>
-    <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body p-3"><div class="small text-muted">Rata-rata Error / Accuracy</div><div class="fs-5 fw-bold text-dark"><?= number_format((float)$evaluation_summary['average_error'], 2, ',', '.') ?>% <small class="fs-6 text-muted">error</small></div><small class="text-muted">Akurasi <?= number_format((float)$evaluation_summary['accuracy'], 2, ',', '.') ?>%</small></div></div></div>
+<div class="mb-2">
+    <h6 class="fw-bold text-dark mb-1"><i class="fas fa-chart-column text-primary me-2"></i>Grafik Forecast &amp; Realisasi</h6>
+    <div class="small text-muted">Ringkasan tren sesuai periode dan produk yang dipilih.</div>
 </div>
 <div class="row g-3 mb-4">
-    <div class="col-12 col-xl-6"><div class="card h-100"><div class="card-header bg-white fw-semibold">Forecast vs Realisasi per Periode (Jumlah)</div><div class="card-body"><div style="height:260px"><canvas id="forecastActualBarChart"></canvas></div></div></div></div>
+    <div class="col-12 col-xl-6"><div class="card h-100"><div class="card-header bg-white fw-semibold">Forecast vs Realisasi per Periode</div><div class="card-body"><div style="height:260px"><canvas id="forecastActualBarChart"></canvas></div></div></div></div>
     <div class="col-12 col-xl-6"><div class="card h-100"><div class="card-header bg-white fw-semibold">Tren Forecast &amp; Realisasi</div><div class="card-body"><div style="height:260px"><canvas id="forecastActualLineChart"></canvas></div></div></div></div>
 </div>
-<div class="card border-0 shadow-sm mb-4">
-    <div class="card-header bg-white py-3 fw-bold"><i class="fas fa-magnifying-glass-chart text-primary me-2"></i>Rincian Evaluasi &amp; AI Insight</div>
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0 small">
-            <thead class="table-light">
-                <tr>
-                    <th>Nama Produk</th><th>Periode Forecast</th><th class="text-end">Jumlah Forecast</th><th class="text-end">Jumlah Realisasi</th><th class="text-end">Selisih</th><th class="text-end">Persentase Error</th><th>Keterangan Evaluasi</th><th>Aksi/Detail</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php if (empty($evaluation_rows)): ?>
-                    <tr><td colspan="8" class="text-center text-muted py-4">Belum ada data forecast yang sesuai dengan filter untuk dievaluasi.</td></tr>
-                <?php else: ?>
-                    <?php foreach ($evaluation_rows as $row): ?>
-                        <?php $evaluationClass = $row['evaluation'] === 'Overforecast' ? 'danger' : ($row['evaluation'] === 'Underforecast' ? 'warning text-dark' : 'success'); ?>
-                        <tr>
-                            <td><div class="fw-semibold"><?= htmlspecialchars($row['product_name']) ?></div><small class="text-muted font-monospace"><?= htmlspecialchars($row['product_code']) ?></small></td>
-                            <td class="font-monospace"><?= htmlspecialchars($row['period']) ?></td>
-                            <td class="text-end font-monospace"><?= number_format((float)$row['forecast_quantity'], 0, ',', '.') ?> <?= htmlspecialchars($row['product_unit']) ?></td>
-                            <td class="text-end font-monospace"><?= number_format((float)$row['realization_quantity'], 0, ',', '.') ?> <?= htmlspecialchars($row['product_unit']) ?></td>
-                            <td class="text-end font-monospace fw-bold <?= $row['difference'] > 0 ? 'text-danger' : ($row['difference'] < 0 ? 'text-warning-emphasis' : 'text-success') ?>"><?= number_format((float)$row['difference'], 0, ',', '.') ?></td>
-                            <td class="text-end font-monospace"><?= number_format((float)$row['error_percentage'], 2, ',', '.') ?>%</td>
-                            <td><span class="badge bg-<?= $evaluationClass ?>"><?= htmlspecialchars($row['evaluation']) ?></span></td>
-                            <td><details><summary class="btn btn-outline-primary btn-sm">AI Insight</summary><div class="position-absolute bg-white border rounded shadow p-2 small" style="z-index:5; min-width:240px; max-width:320px;"><strong>Insight Evaluasi Otomatis</strong><br><?= htmlspecialchars($row['insight']) ?></div></details></td>
-                        </tr>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </tbody>
-        </table>
-    </div>
-</div>
+
 <?php endif; ?>
 
 <!-- Panel Riwayat dan Impor CSV Data Penjualan Aktual -->
@@ -689,40 +635,21 @@ function calcTotal12m() {
 
 document.addEventListener('DOMContentLoaded', () => {
     if (typeof Chart === 'undefined') return;
-    const evaluationChartLabels = <?= json_encode($evaluation_chart_labels) ?>;
-    const evaluationForecast = <?= json_encode($evaluation_chart_forecast) ?>;
-    const evaluationRealization = <?= json_encode($evaluation_chart_realization) ?>;
+    const chartLabels = <?= json_encode($comparison_chart_labels) ?>;
+    const forecastValues = <?= json_encode($comparison_chart_forecast) ?>;
+    const realizationValues = <?= json_encode($comparison_chart_realization) ?>;
     const comparisonChart = document.getElementById('forecastActualBarChart');
     if (comparisonChart) {
         new Chart(comparisonChart, {
             type: 'bar',
             data: {
-                labels: evaluationChartLabels,
+                labels: chartLabels,
                 datasets: [
-                    {
-                        label: 'Forecast',
-                        data: evaluationForecast,
-                        backgroundColor: 'rgba(22, 163, 74, 0.75)',
-                        borderColor: '#16a34a',
-                        borderWidth: 1,
-                        borderRadius: 4
-                    },
-                    {
-                        label: 'Realisasi',
-                        data: evaluationRealization,
-                        backgroundColor: 'rgba(37, 99, 235, 0.75)',
-                        borderColor: '#2563eb',
-                        borderWidth: 1,
-                        borderRadius: 4
-                    }
+                    { label: 'Forecast', data: forecastValues, backgroundColor: 'rgba(22, 163, 74, 0.75)', borderColor: '#16a34a', borderWidth: 1, borderRadius: 4 },
+                    { label: 'Realisasi', data: realizationValues, backgroundColor: 'rgba(37, 99, 235, 0.75)', borderColor: '#2563eb', borderWidth: 1, borderRadius: 4 }
                 ]
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { position: 'bottom' } },
-                scales: { y: { beginAtZero: true } }
-            }
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true } } }
         });
     }
     const trendChart = document.getElementById('forecastActualLineChart');
@@ -730,34 +657,13 @@ document.addEventListener('DOMContentLoaded', () => {
         new Chart(trendChart, {
             type: 'line',
             data: {
-                labels: evaluationChartLabels,
+                labels: chartLabels,
                 datasets: [
-                    {
-                        label: 'Forecast',
-                        data: evaluationForecast,
-                        borderColor: '#16a34a',
-                        backgroundColor: 'rgba(22, 163, 74, 0.1)',
-                        borderWidth: 2,
-                        tension: 0.25,
-                        pointRadius: 3
-                    },
-                    {
-                        label: 'Realisasi',
-                        data: evaluationRealization,
-                        borderColor: '#2563eb',
-                        backgroundColor: 'rgba(37, 99, 235, 0.1)',
-                        borderWidth: 2,
-                        tension: 0.25,
-                        pointRadius: 3
-                    }
+                    { label: 'Forecast', data: forecastValues, borderColor: '#16a34a', backgroundColor: 'rgba(22, 163, 74, 0.1)', borderWidth: 2, tension: 0.25, pointRadius: 3 },
+                    { label: 'Realisasi', data: realizationValues, borderColor: '#2563eb', backgroundColor: 'rgba(37, 99, 235, 0.1)', borderWidth: 2, tension: 0.25, pointRadius: 3 }
                 ]
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { position: 'bottom' } },
-                scales: { y: { beginAtZero: true } }
-            }
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true } } }
         });
     }
     const historyChart = document.getElementById('monthlySalesHistoryChart');

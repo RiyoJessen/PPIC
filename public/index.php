@@ -165,6 +165,15 @@ try {
         exit;
     }
 
+    if ($uri === '/forecast-sales/detail') {
+        $source = isset($_GET['source']) && is_string($_GET['source']) ? $_GET['source'] : '';
+        $id = isset($_GET['id']) && is_scalar($_GET['id']) ? (int) $_GET['id'] : 0;
+        $period = isset($_GET['period']) && is_string($_GET['period']) ? $_GET['period'] : '';
+        $data = \App\Http\Controllers\SalesForecastController::detail($source, $id, $period);
+        echo view('sales.detail', $data);
+        exit;
+    }
+
     if ($uri === '/forecast-sales/store-sales' && $method === 'POST') {
         \App\Http\Controllers\SalesForecastController::storeSalesHistory($_POST, (int) $_SESSION['user_id']);
         $yr = (int) ($_POST['redirect_year'] ?? date('Y'));

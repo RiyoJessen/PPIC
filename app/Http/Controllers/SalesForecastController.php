@@ -8,6 +8,68 @@ use App\Services\SalesForecastService;
 
 class SalesForecastController extends Controller
 {
+    public static function detail(string $source, int $id, string $period): array
+    {
+        if ($id < 1 || !preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $period)) {
+            throw new \RuntimeException('Data detail tidak valid.');
+        }
+
+        if ($source === 'forecast') {
+            $monthColumn = 'm' . (int) substr($period, 5, 2);
+            $record = Database::selectOne(
+                "SELECT sf.method, sf.notes, sf.{$monthColumn} AS forecast_quantity,
+                        p.id AS product_id, p.code AS product_code, p.unit AS product_unit
+                 FROM sales_forecasts sf
+                 JOIN products p ON p.id = sf.product_id
+                 WHERE sf.id = :id AND sf.forecast_year = :year",
+                ['id' => $id, 'year' => (int) substr($period, 0, 4)]
+            );
+            if (!$record) {
+                throw new \RuntimeException('Data forecast tidak ditemukan.');
+            }
+            $forecastQuantity = (float) ($record['forecast_quantity'] ?? 0);
+            $realization = Database::selectOne(
+                "SELECT COALESCE(SUM(quantity), 0) AS quantity
+                 FROM sales_histories
+                 WHERE product_id = :product_id AND sale_month = :period
+                   AND status IN ('confirmed_so', 'fulfilled')",
+                ['product_id' => (int) $record['product_id'], 'period' => $period]
+            );
+            $realizationQuantity = (float) ($realization['quantity'] ?? 0);
+            return [
+                'source' => 'forecast',
+                'evaluation' => array_merge([
+                    'forecast_quantity' => $forecastQuantity,
+                    'realization_quantity' => $realizationQuantity,
+                    'product_unit' => $record['product_unit'],
+                ], self::calculateEvaluationMetrics($forecastQuantity, $realizationQuantity)),
+                'record' => [
+                    'product_code' => $record['product_code'],
+                    'period' => $period,
+                    'method' => $record['method'],
+                    'notes' => $record['notes'] ?? '',
+                ],
+            ];
+        }
+
+        if ($source === 'sales') {
+            $record = Database::selectOne(
+                "SELECT sh.doc_number, sh.doc_type, sh.sale_month, sh.customer_name,
+                        sh.total_amount, sh.notes, p.code AS product_code
+                 FROM sales_histories sh
+                 JOIN products p ON p.id = sh.product_id
+                 WHERE sh.id = :id AND sh.sale_month = :period",
+                ['id' => $id, 'period' => $period]
+            );
+            if (!$record) {
+                throw new \RuntimeException('Data dokumen sales tidak ditemukan.');
+            }
+            return ['source' => 'sales', 'record' => $record];
+        }
+
+        throw new \RuntimeException('Jenis data tidak valid.');
+    }
+
     public static function index(
         ?int $year = null,
         ?int $selectedProductId = null,
@@ -52,7 +114,7 @@ class SalesForecastController extends Controller
         $search = trim((string) $search);
         $search = $search !== '' ? substr($search, 0, 100) : '';
         $page = max(1, $page ?? 1);
-        $perPage = 10;
+        $perPage = 40;
         $products = Database::select("SELECT * FROM products ORDER BY id ASC");
 
         $historyConditions = ["sh.status = 'fulfilled'"];
@@ -205,7 +267,7 @@ class SalesForecastController extends Controller
             }
         }
         ksort($availableForecastMonths);
-        $evaluationForecasts = [];
+        $comparisonChartTotals = [];
         foreach ($allForecasts as $forecast) {
             if ($selectedProductId !== null && (int) $forecast['product_id'] !== $selectedProductId) {
                 continue;
@@ -232,7 +294,10 @@ class SalesForecastController extends Controller
                     'method' => $forecast['method'],
                     'notes' => $forecast['notes'] ?? '',
                 ];
-                $evaluationForecasts[] = $forecastRow;
+                if (!isset($comparisonChartTotals[$period])) {
+                    $comparisonChartTotals[$period] = ['forecast' => 0.0, 'realization' => 0.0];
+                }
+                $comparisonChartTotals[$period]['forecast'] += $forecastRow['quantity'];
 
                 if ($forecastRow['quantity'] > 0 && $sourceFilter !== 'sales' && (
                     $search === ''
@@ -263,6 +328,41 @@ class SalesForecastController extends Controller
             }
         }
 
+        $realizationConditions = ["status IN ('confirmed_so', 'fulfilled')"];
+        $realizationParams = [];
+        if ($periodStart !== null) {
+            $realizationConditions[] = 'sale_month >= :chart_period_start';
+            $realizationParams['chart_period_start'] = $periodStart;
+        }
+        if ($periodEnd !== null) {
+            $realizationConditions[] = 'sale_month <= :chart_period_end';
+            $realizationParams['chart_period_end'] = $periodEnd;
+        }
+        if ($selectedProductId !== null) {
+            $realizationConditions[] = 'product_id = :chart_product_id';
+            $realizationParams['chart_product_id'] = $selectedProductId;
+        }
+        $chartRealizations = Database::select(
+            "SELECT sale_month, SUM(quantity) AS quantity
+             FROM sales_histories
+             WHERE " . implode(' AND ', $realizationConditions) . "
+             GROUP BY sale_month",
+            $realizationParams
+        );
+        foreach ($chartRealizations as $chartRealization) {
+            $chartPeriod = (string) $chartRealization['sale_month'];
+            if (!isset($comparisonChartTotals[$chartPeriod])) {
+                $comparisonChartTotals[$chartPeriod] = ['forecast' => 0.0, 'realization' => 0.0];
+            }
+            $comparisonChartTotals[$chartPeriod]['realization'] = (float) $chartRealization['quantity'];
+        }
+        ksort($comparisonChartTotals);
+        $monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+        $comparisonChartLabels = array_map(
+            static fn(string $period): string => $monthNames[(int) substr($period, 5, 2) - 1] . ' ' . substr($period, 0, 4),
+            array_keys($comparisonChartTotals)
+        );
+
         if ($search !== '' && $sourceFilter !== 'forecast') {
             $combinedRows = array_values(array_filter($combinedRows, static function (array $row) use ($search): bool {
                 return stripos((string) $row['display_id'], $search) !== false
@@ -284,74 +384,6 @@ class SalesForecastController extends Controller
         $combinedLastPage = max(1, (int) ceil($combinedTotal / $perPage));
         $page = min($page, $combinedLastPage);
         $paginatedCombinedRows = array_slice($combinedRows, ($page - 1) * $perPage, $perPage);
-
-        $realizationConditions = ["sh.status IN ('confirmed_so', 'fulfilled')"];
-        $realizationParams = [];
-        if ($periodStart !== null) {
-            $realizationConditions[] = 'sh.sale_month >= :evaluation_period_start';
-            $realizationParams['evaluation_period_start'] = $periodStart;
-        }
-        if ($periodEnd !== null) {
-            $realizationConditions[] = 'sh.sale_month <= :evaluation_period_end';
-            $realizationParams['evaluation_period_end'] = $periodEnd;
-        }
-        if ($selectedProductId !== null) {
-            $realizationConditions[] = 'sh.product_id = :evaluation_product_id';
-            $realizationParams['evaluation_product_id'] = $selectedProductId;
-        }
-        $realizationRows = Database::select("
-            SELECT sh.product_id, sh.sale_month, SUM(sh.quantity) as quantity
-            FROM sales_histories sh
-            WHERE " . implode(' AND ', $realizationConditions) . "
-            GROUP BY sh.product_id, sh.sale_month
-        ", $realizationParams);
-        $realizationsByPeriod = [];
-        foreach ($realizationRows as $row) {
-            $realizationsByPeriod[(int) $row['product_id'] . '|' . $row['sale_month']] = (float) $row['quantity'];
-        }
-
-        $evaluationByPeriod = [];
-        foreach ($evaluationForecasts as $forecastRow) {
-            $key = $forecastRow['product_id'] . '|' . $forecastRow['period'];
-            if (!isset($evaluationByPeriod[$key])) {
-                $evaluationByPeriod[$key] = $forecastRow + [
-                    'forecast_quantity' => 0.0,
-                    'realization_quantity' => $realizationsByPeriod[$key] ?? 0.0,
-                ];
-            }
-            $evaluationByPeriod[$key]['forecast_quantity'] += $forecastRow['quantity'];
-        }
-        $evaluationRows = [];
-        foreach ($evaluationByPeriod as $row) {
-            if ($row['forecast_quantity'] <= 0 && $row['realization_quantity'] <= 0) {
-                continue;
-            }
-            $metrics = self::calculateEvaluationMetrics($row['forecast_quantity'], $row['realization_quantity']);
-            $evaluationRows[] = array_merge($row, $metrics);
-        }
-        usort($evaluationRows, static function (array $left, array $right): int {
-            $periodOrder = strcmp($right['period'], $left['period']);
-            return $periodOrder !== 0 ? $periodOrder : strcmp($left['product_name'], $right['product_name']);
-        });
-
-        $chartTotals = [];
-        $evaluationForecastTotal = 0.0;
-        $evaluationRealizationTotal = 0.0;
-        $errorTotal = 0.0;
-        foreach ($evaluationRows as $row) {
-            $evaluationForecastTotal += $row['forecast_quantity'];
-            $evaluationRealizationTotal += $row['realization_quantity'];
-            $errorTotal += $row['error_percentage'];
-            if (!isset($chartTotals[$row['period']])) {
-                $chartTotals[$row['period']] = ['forecast' => 0.0, 'realization' => 0.0];
-            }
-            $chartTotals[$row['period']]['forecast'] += $row['forecast_quantity'];
-            $chartTotals[$row['period']]['realization'] += $row['realization_quantity'];
-        }
-        ksort($chartTotals);
-        $evaluationDifferenceTotal = $evaluationForecastTotal - $evaluationRealizationTotal;
-        $averageError = count($evaluationRows) > 0 ? $errorTotal / count($evaluationRows) : 0.0;
-        $monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
 
         return [
             'year' => $year,
@@ -375,32 +407,23 @@ class SalesForecastController extends Controller
             'combined_rows' => $paginatedCombinedRows,
             'combined_total' => $combinedTotal,
             'combined_page' => $page,
+            'combined_per_page' => $perPage,
             'combined_last_page' => $combinedLastPage,
             'available_forecast_months' => array_keys($availableForecastMonths),
             'source_filter' => $sourceFilter,
             'period_start' => $periodStart,
             'period_end' => $periodEnd,
             'search' => $search,
-            'evaluation_rows' => $evaluationRows,
-            'evaluation_summary' => [
-                'forecast_total' => $evaluationForecastTotal,
-                'realization_total' => $evaluationRealizationTotal,
-                'difference_total' => $evaluationDifferenceTotal,
-                'average_error' => $averageError,
-                'accuracy' => max(0.0, 100.0 - $averageError),
-            ],
-            'evaluation_chart_labels' => array_map(
-                static fn(string $period): string => $monthNames[(int) substr($period, 5, 2) - 1] . ' ' . substr($period, 0, 4),
-                array_keys($chartTotals)
-            ),
-            'evaluation_chart_forecast' => array_values(array_map(
+            'comparison_chart_labels' => $comparisonChartLabels,
+            'comparison_chart_forecast' => array_values(array_map(
                 static fn(array $totals): float => $totals['forecast'],
-                $chartTotals
+                $comparisonChartTotals
             )),
-            'evaluation_chart_realization' => array_values(array_map(
+            'comparison_chart_realization' => array_values(array_map(
                 static fn(array $totals): float => $totals['realization'],
-                $chartTotals
+                $comparisonChartTotals
             )),
+
         ];
     }
 
